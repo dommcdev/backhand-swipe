@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { NavTabs } from './NavTabs'
+import { SettingsMenu } from './SettingsMenu'
 
 export function SiteHeader() {
   return (
@@ -11,7 +12,10 @@ export function SiteHeader() {
             Backhand Swipe
           </span>
         </Link>
-        <NavTabs className="hidden md:flex" />
+        <div className="flex items-center gap-3">
+          <NavTabs className="hidden md:flex" />
+          <SettingsMenu />
+        </div>
       </div>
     </header>
   )

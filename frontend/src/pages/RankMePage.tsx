@@ -4,10 +4,10 @@ import { categoryLabels, rankingsQuery } from '../api/queries'
 import type { RankedFighter } from '../api/types'
 import { FighterFace } from '../components/FighterArt'
 import { winChance } from '../lib/elo'
-import { formatNumber, formatWeight, ordinal } from '../lib/format'
+import { CM_PER_IN, formatNumber, formatWeight, LB_PER_KG, ordinal } from '../lib/format'
 import { hasBodyStats, predictRating, type BodyStats, type RatedPerson } from '../lib/rankMe'
+import { useUnits, type Units } from '../lib/units'
 
-type Units = 'metric' | 'imperial'
 type FieldName = 'weight' | 'age' | 'height'
 
 interface FormValues {
@@ -18,8 +18,7 @@ interface FormValues {
   inches: string
 }
 
-const LB_PER_KG = 2.20462
-const CM_PER_IN = 2.54
+const emptyValues: FormValues = { weight: '', age: '', cm: '', ft: '', inches: '' }
 const fieldNames: FieldName[] = ['weight', 'age', 'height']
 
 const num = (value: string) => (value.trim() === '' ? NaN : Number(value))
@@ -28,6 +27,19 @@ function toStats(units: Units, v: FormValues): BodyStats {
   if (units === 'metric') return { weightKg: num(v.weight), heightCm: num(v.cm), age: num(v.age) }
   const inches = v.inches.trim() === '' ? 0 : num(v.inches)
   return { weightKg: num(v.weight) / LB_PER_KG, heightCm: (num(v.ft) * 12 + inches) * CM_PER_IN, age: num(v.age) }
+}
+
+/** Rewrites what has been typed so far in the other units. */
+function convertValues(from: Units, values: FormValues, to: Units): FormValues {
+  const { weightKg, heightCm } = toStats(from, values)
+  const next = { ...emptyValues, age: values.age }
+  if (!Number.isNaN(weightKg)) next.weight = String(Math.round(to === 'metric' ? weightKg : weightKg * LB_PER_KG))
+  if (!Number.isNaN(heightCm)) {
+    const totalIn = Math.round(heightCm / CM_PER_IN)
+    if (to === 'metric') next.cm = String(Math.round(heightCm))
+    else Object.assign(next, { ft: String(Math.floor(totalIn / 12)), inches: String(totalIn % 12) })
+  }
+  return next
 }
 
 /** One message per field, or an empty string when the field is fine. */
@@ -58,21 +70,16 @@ function describeBody(units: Units, weightKg: number, heightCm: number, age: num
   return `${Math.floor(totalIn / 12)}′${totalIn % 12}″, ${Math.round(weightKg * LB_PER_KG)} lb, ${age} yrs`
 }
 
-function describeWeight(units: Units, kg: number) {
-  if (units === 'metric') return formatWeight(kg)
-  const lb = kg * LB_PER_KG
-  if (lb >= 1) return `${formatNumber(Math.round(lb))} lb`
-  return lb * 16 >= 1 ? `${Math.round(lb * 16)} oz` : 'under 1 oz'
-}
-
 const describeFighter = (units: Units, f: RankedFighter) =>
   hasBodyStats(f)
     ? describeBody(units, f.weightKg, f.heightCm, f.age)
-    : `${categoryLabels[f.category]}, ${describeWeight(units, f.weightKg * f.count)}`
+    : `${categoryLabels[f.category]}, ${formatWeight(f.weightKg * f.count, units)}`
 
 export function RankMePage() {
-  const [units, setUnits] = useState<Units>('metric')
-  const [values, setValues] = useState<FormValues>({ weight: '', age: '', cm: '', ft: '', inches: '' })
+  const units = useUnits()
+  const [form, setForm] = useState({ units, values: emptyValues })
+  if (form.units !== units) setForm({ units, values: convertValues(form.units, form.values, units) })
+  const { values } = form
   const [touched, setTouched] = useState<Record<FieldName, boolean>>({ weight: false, age: false, height: false })
 
   const stats = toStats(units, values)
@@ -86,43 +93,14 @@ export function RankMePage() {
   const people = fighters.filter(hasBodyStats)
   const you = valid && people.length > 0 ? predictRating(people, rounded) : undefined
 
-  function switchUnits(next: Units) {
-    if (next === units) return
-    const kg = stats.weightKg
-    const cm = stats.heightCm
-    const patch: Partial<FormValues> = {}
-    if (!Number.isNaN(kg)) patch.weight = String(Math.round(next === 'metric' ? kg : kg * LB_PER_KG))
-    if (!Number.isNaN(cm)) {
-      const totalIn = Math.round(cm / CM_PER_IN)
-      Object.assign(patch, next === 'metric' ? { cm: String(Math.round(cm)) } : { ft: String(Math.floor(totalIn / 12)), inches: String(totalIn % 12) })
-    }
-    setValues((v) => ({ ...v, ...patch }))
-    setUnits(next)
-  }
-
   const set = (field: keyof FormValues) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setValues((v) => ({ ...v, [field]: e.target.value }))
+    setForm((f) => ({ ...f, values: { ...f.values, [field]: e.target.value } }))
   const touch = (field: FieldName) => () => setTouched((t) => (t[field] ? t : { ...t, [field]: true }))
-
-  const other: Units = units === 'metric' ? 'imperial' : 'metric'
 
   return (
     <div className="flex flex-col gap-6 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:items-start md:gap-x-14 md:pt-2">
       <div className="flex flex-col gap-5 md:sticky md:top-6">
         <form noValidate onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-1">
-          <div className="pb-6">
-            <div role="group" aria-label="Units" className="group flex h-[56px] items-stretch rounded-xl border-[3px] border-black bg-card shadow-lift-sm">
-              <span className="cut flex w-[112px] shrink-0 items-center rounded-l-[9px] bg-black pl-3.5 text-[1.05rem] font-black text-white italic transition-colors group-focus-within:stripes group-focus-within:bg-me">
-                Units
-              </span>
-              <div className="flex flex-1 items-center justify-between px-2">
-                <UnitArrow direction="left" label={`Switch to ${other}`} onClick={() => switchUnits(other)} />
-                <span className="text-[1.2rem] font-black capitalize italic">{units}</span>
-                <UnitArrow direction="right" label={`Switch to ${other}`} onClick={() => switchUnits(other)} />
-              </div>
-            </div>
-          </div>
-
           <Field label="Weight" id="weight" error={shown('weight')} onLeave={touch('weight')}>
             <NumberBox
               id="weight"
@@ -163,21 +141,6 @@ export function RankMePage() {
 
       <Ladder fighters={fighters} youElo={you?.elo} you={rounded} units={units} />
     </div>
-  )
-}
-
-function UnitArrow({ direction, label, onClick }: { direction: 'left' | 'right'; label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className="grid size-10 place-items-center rounded-lg text-me hover:bg-panel focus-visible:bg-panel focus-visible:outline-none"
-    >
-      <svg viewBox="0 0 20 20" aria-hidden="true" className="size-6">
-        <path d={direction === 'left' ? 'M14 3 5 10l9 7z' : 'm6 3 9 7-9 7z'} fill="currentColor" stroke="#000" strokeWidth="2" strokeLinejoin="round" />
-      </svg>
-    </button>
   )
 }
 

@@ -68,11 +68,11 @@ export function VotePage() {
   const visible = items.filter((i) => i.leaving || active.indexOf(i) < 3)
 
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2.5 gap-y-4 [grid-template-areas:'deck_deck_deck'_'left_skip_right'_'verdict_verdict_verdict'] lg:grid-cols-[1fr_440px_1fr] lg:gap-x-10 lg:[grid-template-areas:'left_deck_right'_'._skip_.'_'verdict_verdict_verdict']">
+    <div className="my-auto grid grid-cols-[1fr_auto_1fr] items-center gap-x-2.5 gap-y-4 [grid-template-areas:'deck_deck_deck'_'left_skip_right'_'verdict_verdict_verdict'] lg:grid-cols-[1fr_440px_1fr] lg:gap-x-10 lg:[grid-template-areas:'left_deck_right'_'._skip_.'_'verdict_verdict_verdict']">
       <section
         ref={deck}
         aria-label="Matchups"
-        className="relative h-[clamp(420px,calc(100dvh-390px),500px)] [grid-area:deck] lg:h-[500px]"
+        className="relative h-[clamp(420px,calc(100dvh-380px),500px)] [grid-area:deck] lg:h-[500px]"
       >
         {visible.toReversed().map((item) => {
           const index = active.indexOf(item)

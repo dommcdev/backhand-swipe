@@ -21,4 +21,4 @@ The REST contract the backend needs to implement is documented at the bottom of 
 
 - `src/pages/` has one component per screen: vote, rankings, and where do I rank.
 - `src/components/` holds shared pieces such as the swipe card, the header, and the vote split bar.
-- `src/index.css` defines the palettes. Each palette sets CSS variables (`--bg`, `--panel`, `--corner-l`, `--corner-r`, and so on) that Tailwind exposes as `bg-panel`, `text-corner-l`, etc. The menu-style pieces (`frame`, `stripes`, `outlined`, `segment`) live there too.
+- `src/index.css` defines the palettes. Each palette sets CSS variables (`--bg`, `--panel`, `--corner-l`, `--corner-r`, and so on) that Tailwind exposes as `bg-panel`, `text-corner-l`, etc. The menu-style pieces (`stripes`, `outlined`, `cut`, `segment`, `press`) live there too. The palette and the metric or imperial units are chosen from the settings menu in the header and saved to localStorage.

@@ -1,6 +1,7 @@
 import { useImperativeHandle, useRef, type Ref } from 'react'
 import type { Fighter, Matchup } from '../api/types'
 import { formatWeight } from '../lib/format'
+import { useUnits } from '../lib/units'
 import { FighterArt } from './FighterArt'
 
 export type Call = 'left' | 'right' | 'skip'
@@ -37,6 +38,7 @@ export function SwipeCard({ matchup, pos, onDecided, onExited, onDragProgress, r
   const cardRef = useRef<HTMLElement>(null)
   const drag = useRef({ active: false, startX: 0, startY: 0, dx: 0, dy: 0 })
   const leaving = useRef(false)
+  const units = useUnits()
   const { left, right } = matchup
   const isTop = pos === 0
 
@@ -100,7 +102,7 @@ export function SwipeCard({ matchup, pos, onDecided, onExited, onDragProgress, r
   }
 
   const tape = [
-    ['Total weight', formatWeight(left.weightKg * left.count), formatWeight(right.weightKg * right.count)],
+    ['Total weight', formatWeight(left.weightKg * left.count, units), formatWeight(right.weightKg * right.count, units)],
     ['Secret weapon', left.secretWeapon, right.secretWeapon],
     ['Weakness', left.weakness, right.weakness],
   ]
