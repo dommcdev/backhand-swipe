@@ -165,17 +165,19 @@ function PickButton({ side, fighter, onPick }: PickButtonProps) {
       disabled={!fighter}
       aria-label={fighter ? `${fighter.name} wins` : undefined}
       onClick={onPick}
-      className={`press stripes flex h-16 items-center gap-1.5 rounded-2xl border-[3px] border-black px-2 shadow-lift-sm disabled:opacity-50 lg:h-[180px] lg:w-full lg:max-w-[250px] lg:flex-col lg:justify-between lg:p-5 lg:shadow-lift ${
+      className={`press stripes flex h-16 items-stretch rounded-2xl border-[3px] border-black shadow-lift-sm disabled:opacity-50 lg:h-[180px] lg:w-full lg:max-w-[280px] lg:shadow-lift ${
         isLeft
-          ? 'bg-corner-l text-left [grid-area:left] lg:items-start lg:justify-self-end'
-          : 'flex-row-reverse bg-corner-r text-right [grid-area:right] lg:items-end lg:justify-self-start'
+          ? 'bg-corner-l text-left [grid-area:left] lg:justify-self-end'
+          : 'flex-row-reverse bg-corner-r text-right [grid-area:right] lg:justify-self-start'
       }`}
     >
-      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-black text-white lg:size-12">
+      <span
+        className={`grid w-10 shrink-0 place-items-center lg:w-16 ${isLeft ? 'segment rounded-l-[13px]' : 'segment-end rounded-r-[13px]'}`}
+      >
         <Chevron direction={side} />
       </span>
       <span
-        className={`outlined leading-[1.1] font-black text-balance italic ${long ? 'text-[.9rem] lg:text-[1.5rem]' : 'text-[1.05rem] lg:text-[1.9rem]'}`}
+        className={`flex min-w-0 flex-1 items-center px-2 lg:items-end lg:px-4 lg:pb-4 ${isLeft ? '' : 'justify-end'} outlined leading-[1.1] font-black text-balance italic ${long ? 'text-[.9rem] lg:text-[1.35rem]' : 'text-[1.05rem] lg:text-[1.7rem]'}`}
       >
         {fighter?.name}
       </span>
@@ -185,7 +187,7 @@ function PickButton({ side, fighter, onPick }: PickButtonProps) {
 
 function Chevron({ direction }: { direction: 'left' | 'right' }) {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4 lg:size-6">
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="size-5 lg:size-9">
       <path
         d={direction === 'left' ? 'M13 3 6 10l7 7' : 'm7 3 7 7-7 7'}
         fill="none"

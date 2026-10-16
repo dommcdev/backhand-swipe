@@ -215,6 +215,14 @@
   padding-right: 18px;
 }
 
+/* The same segment for the end of a row, cut on its left edge so both cuts run parallel. */
+@utility segment-end {
+  background-color: #000;
+  color: #fff;
+  clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%);
+  padding-left: 18px;
+}
+
 @layer components {
   /*
    * Swipe deck. --lean-l and --lean-r go from 0 to 1 on the card being dragged.
