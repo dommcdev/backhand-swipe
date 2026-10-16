@@ -1,35 +1,24 @@
-# React + TypeScript + Vite
+# Backhand Swipe frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite + TypeScript, styled with Tailwind CSS.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+bun install
+bun run dev      # http://localhost:5173
+bun run build
+bun run lint
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Data
+
+By default the app runs against an in-browser mock (`src/api/mock.ts`) with seed fighters in `src/api/mockData.ts`. Votes update Elo ratings in memory until the page reloads.
+
+To call the Java backend instead, create `.env.local` with `VITE_API_MODE=live`. Requests go to `/api/...`, which the Vite dev server proxies to `http://localhost:8080`.
+
+The REST contract the backend needs to implement is documented at the bottom of `src/api/types.ts`.
+
+## Layout
+
+- `src/pages/` has one component per screen: vote, rankings, and where do I rank.
+- `src/components/` holds shared pieces such as the swipe card, the header, and the vote split bar.
+- `src/index.css` defines the palettes. Each palette sets CSS variables (`--bg`, `--panel`, `--corner-l`, `--corner-r`, and so on) that Tailwind exposes as `bg-panel`, `text-corner-l`, etc. The menu-style pieces (`frame`, `stripes`, `outlined`, `segment`) live there too.
