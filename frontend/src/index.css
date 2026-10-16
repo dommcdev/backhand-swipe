@@ -14,7 +14,6 @@
   --color-corner-l: var(--corner-l);
   --color-corner-r: var(--corner-r);
   --color-up: var(--up);
-  --color-gold: #ffb400;
   --font-body: 'Rubik Variable', system-ui, sans-serif;
   --shadow-lift: 0 6px 0 rgb(0 0 0 / 0.28);
   --shadow-lift-sm: 0 4px 0 rgb(0 0 0 / 0.28);
@@ -170,7 +169,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   :focus-visible {
-    outline: 3px solid var(--color-gold);
+    outline: 3px solid currentColor;
     outline-offset: 3px;
   }
   input[type='number'] {
@@ -189,12 +188,12 @@
   background-attachment: fixed;
 }
 
-/* White lettering with a dark outline and drop, for names set on color. */
+/* White lettering with a heavy black outline, like a fighting-game menu label. */
 @utility outlined {
   color: #fff;
-  -webkit-text-stroke: 0.12em var(--slate);
+  -webkit-text-stroke: 0.17em #000;
   paint-order: stroke fill;
-  text-shadow: 0 0.08em 0 rgb(0 0 0 / 0.3);
+  text-shadow: 0 0.08em 0 #000;
 }
 
 /* Diagonal sheen over a solid fill. */
@@ -202,34 +201,21 @@
   background-image: repeating-linear-gradient(-60deg, rgb(255 255 255 / 0.14) 0 8px, transparent 8px 18px);
 }
 
-/* A block whose inner edge is cut on an angle. Every control is built from one. */
+/* A right edge cut on an angle. */
 @utility cut {
   clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
-  padding-right: 14px;
+  padding-right: 18px;
 }
-@utility cut-end {
-  clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%);
-  padding-left: 14px;
-}
-/* The standard dark label block. */
+
+/* A black label segment whose right edge is cut on an angle. It merges with a black border around it. */
 @utility segment {
-  background-color: var(--slate);
+  background-color: #000;
   color: #fff;
   clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
-  padding-right: 14px;
+  padding-right: 18px;
 }
 
 @layer components {
-  .press {
-    transition:
-      translate 0.08s,
-      box-shadow 0.08s;
-  }
-  .press:not(:disabled):active {
-    translate: 0 4px;
-    box-shadow: 0 1px 0 rgb(0 0 0 / 0.28);
-  }
-
   /*
    * Swipe deck. --lean-l and --lean-r go from 0 to 1 on the card being dragged.
    * --drag is set on the deck, so the cards underneath rise to meet it as it moves away.
@@ -297,7 +283,9 @@
     pointer-events: none;
     border-radius: 10px;
     background: linear-gradient(115deg, #ff9a00, #ffe341);
-    box-shadow: 0 5px 0 rgb(0 0 0 / 0.3);
+    box-shadow:
+      0 0 0 3px #000,
+      0 5px 0 3px rgb(0 0 0 / 0.35);
   }
   .corner-l .stamp {
     left: 12px;
@@ -313,6 +301,31 @@
   .crowd {
     filter: drop-shadow(0 4px 0 rgb(0 0 0 / 0.3));
   }
+}
+
+/*
+ * Hover brightens a control, pressing pushes it in, and keyboard focus lifts it off the page.
+ * These rules sit outside any layer so they win over the shadow utilities on the same element.
+ */
+.press {
+  transition:
+    translate 0.08s ease-out,
+    box-shadow 0.08s ease-out,
+    filter 0.08s ease-out;
+}
+@media (hover: hover) {
+  .press:not(:disabled):hover {
+    filter: brightness(1.08);
+  }
+}
+.press:not(:disabled):focus-visible {
+  outline: none;
+  translate: 0 -3px;
+  box-shadow: 0 7px 0 rgb(0 0 0 / 0.3);
+}
+.press:not(:disabled):active {
+  translate: 0 2px;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.3);
 }
 
 @keyframes slot {

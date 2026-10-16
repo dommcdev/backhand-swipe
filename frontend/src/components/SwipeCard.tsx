@@ -117,9 +117,9 @@ export function SwipeCard({ matchup, pos, onDecided, onExited, onDragProgress, r
       onPointerUp={isTop ? handlePointerEnd : undefined}
       onPointerCancel={isTop ? handlePointerEnd : undefined}
       style={{ zIndex: pos === 'leaving' ? 4 : 3 - pos }}
-      className="swipe-card absolute inset-x-0 top-0 bottom-7 flex touch-pan-y flex-col overflow-hidden rounded-[22px] bg-card shadow-lift select-none data-[pos=0]:cursor-grab data-[pos=0]:active:cursor-grabbing"
+      className="swipe-card absolute inset-x-0 top-0 bottom-7 flex touch-pan-y flex-col overflow-hidden rounded-[22px] border-[3px] border-black bg-card shadow-lift select-none data-[pos=0]:cursor-grab data-[pos=0]:active:cursor-grabbing"
     >
-      <div className="relative min-h-[210px] flex-1 bg-slate">
+      <div className="relative min-h-[210px] flex-1 bg-black">
         <div className="corner corner-l stripes">
           <div className="flex flex-1 items-center justify-center">
             <FighterArt fighter={left} />
@@ -138,9 +138,9 @@ export function SwipeCard({ matchup, pos, onDecided, onExited, onDragProgress, r
         </div>
         <div
           aria-hidden="true"
-          className="absolute top-1/2 left-1/2 z-1 grid size-[68px] -translate-1/2 rounded-full bg-white p-[5px] shadow-lift-sm"
+          className="absolute top-1/2 left-1/2 z-1 grid size-[72px] -translate-1/2 rounded-full bg-black p-[5px]"
         >
-          <span className="grid place-items-center rounded-full bg-[linear-gradient(115deg,#ff9a00,#ffe341)]">
+          <span className="grid place-items-center rounded-full bg-[linear-gradient(115deg,#ff9a00,#ffe341)] ring-3 ring-white ring-inset">
             <span className="outlined pr-0.5 text-[1.6rem] leading-none font-black italic">VS</span>
           </span>
         </div>
@@ -150,7 +150,7 @@ export function SwipeCard({ matchup, pos, onDecided, onExited, onDragProgress, r
         {tape.map(([stat, l, r]) => (
           <li
             key={stat}
-            className="grid grid-cols-[1fr_auto_1fr] overflow-hidden rounded-lg bg-panel text-[.875rem] leading-tight font-bold tabular-nums"
+            className="grid grid-cols-[1fr_auto_1fr] overflow-hidden rounded-lg border-2 border-line bg-panel text-[.875rem] leading-tight font-bold tabular-nums"
           >
             <span className="self-center px-2.5 py-[7px]">{l}</span>
             <span className="grid place-items-center bg-slate px-4 text-[.6875rem] font-semibold text-white [clip-path:polygon(9px_0,calc(100%-9px)_0,100%_100%,0_100%)]">

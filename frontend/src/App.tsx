@@ -16,7 +16,7 @@ export default function App() {
       <footer className="mx-auto flex w-full max-w-[1180px] justify-center px-[18px] pt-12 pb-32 md:justify-end md:px-10 md:pb-10">
         <PalettePicker />
       </footer>
-      <div className="fixed inset-x-0 bottom-0 z-20 rounded-t-[22px] bg-slate px-3 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] md:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-20 rounded-t-[22px] bg-black px-3 pt-5 pb-[max(12px,env(safe-area-inset-bottom))] md:hidden">
         <NavTabs className="mx-auto max-w-[420px]" />
       </div>
       <ScrollRestoration />

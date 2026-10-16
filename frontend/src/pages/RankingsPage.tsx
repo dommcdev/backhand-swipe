@@ -1,18 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { useDeferredValue, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { categories, rankingsQuery } from '../api/queries'
+import { categories, categoryLabels, rankingsQuery } from '../api/queries'
 import type { Category, ClosestCall, RankedFighter } from '../api/types'
 import { FighterFace, FighterGlyph, Medallion } from '../components/FighterArt'
 import { SplitBar } from '../components/SplitBar'
 import { formatNumber, percent } from '../lib/format'
-
-const categoryLabels: Record<Category, string> = {
-  people: 'People',
-  fictional: 'Fictional',
-  animals: 'Animals',
-  objects: 'Objects',
-}
 
 const PAGE_SIZE = 25
 
@@ -46,9 +39,9 @@ export function RankingsPage() {
         <button
           type="button"
           onClick={() => refetch()}
-          className="press stripes rounded-xl bg-rank px-4 py-2 shadow-lift-sm"
+          className="press stripes rounded-xl border-[3px] border-black bg-rank px-4 py-2 shadow-lift-sm"
         >
-          <span className="font-black text-white italic">Try again</span>
+          <span className="outlined font-black italic">Try again</span>
         </button>
       </div>
     ) : null
@@ -72,9 +65,9 @@ export function RankingsPage() {
               type="button"
               aria-pressed={c === category}
               onClick={() => setParams(c ? { category: c } : {}, { replace: true })}
-              className="press h-11 shrink-0 rounded-xl bg-card px-4 text-[.95rem] font-black text-fg italic shadow-lift-sm aria-pressed:stripes aria-pressed:bg-rank aria-pressed:text-white"
+              className="press stripes h-11 shrink-0 rounded-xl border-[3px] border-black bg-slate px-4 text-[.95rem] font-black text-white italic shadow-lift-sm aria-pressed:bg-rank"
             >
-              {c ? categoryLabels[c] : 'Everyone'}
+              <span className={c === category ? 'outlined' : ''}>{c ? categoryLabels[c] : 'Everyone'}</span>
             </button>
           ))}
         </div>
@@ -98,14 +91,14 @@ export function RankingsPage() {
         {matches.length > 0 ? (
           <StandingsTable key={`${category}:${query}`} rows={matches} showCategory={!category} />
         ) : (
-          <div className="flex flex-col items-start gap-3.5 rounded-2xl bg-card p-5 shadow-lift-sm">
+          <div className="flex flex-col items-start gap-3.5 rounded-2xl border-[3px] border-black bg-card p-5 shadow-lift-sm">
             <p className="m-0 text-2xl font-black italic">No fighters match “{search.trim()}”</p>
             <button
               type="button"
               onClick={() => setSearch('')}
-              className="press stripes rounded-xl bg-rank px-4 py-2 font-black text-white italic shadow-lift-sm"
+              className="press stripes rounded-xl border-[3px] border-black bg-rank px-4 py-2 shadow-lift-sm"
             >
-              Clear search
+              <span className="outlined font-black italic">Clear search</span>
             </button>
           </div>
         )}
@@ -114,19 +107,19 @@ export function RankingsPage() {
   )
 }
 
-/** A dark tab with an angled end, like a menu breadcrumb. */
+/** A black tab with slanted ends, like a menu breadcrumb. */
 function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
   return (
-    <h2 id={id} className="segment m-0 rounded-l-xl py-1.5 pr-7 pl-4 text-[1.35rem] leading-tight font-black italic md:text-[1.6rem]">
-      {children}
+    <h2 id={id} className="m-0 ml-1.5 -skew-x-10 rounded-lg bg-black px-4 py-1.5 text-[1.35rem] leading-tight font-black text-white italic md:text-[1.6rem]">
+      <span className="block skew-x-10">{children}</span>
     </h2>
   )
 }
 
 function SearchBox({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   return (
-    <label className="group flex h-[52px] w-full items-stretch rounded-xl bg-card shadow-lift-sm md:max-w-md">
-      <span className="segment grid w-14 shrink-0 place-items-center rounded-l-xl transition-colors group-focus-within:bg-rank">
+    <label className="group flex h-[52px] w-full items-stretch rounded-xl border-[3px] border-black bg-card shadow-lift-sm md:max-w-md">
+      <span className="segment grid w-14 shrink-0 place-items-center rounded-l-[9px] transition-colors group-focus-within:stripes group-focus-within:bg-rank">
         <svg viewBox="0 0 20 20" aria-hidden="true" className="size-5">
           <circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" strokeWidth="2.75" />
           <path d="m13 13 4.5 4.5" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" />
@@ -147,7 +140,7 @@ function SearchBox({ value, onChange }: { value: string; onChange: (value: strin
           type="button"
           aria-label="Clear search"
           onClick={() => onChange('')}
-          className="mr-2.5 grid size-7 place-items-center self-center rounded-full bg-slate text-sm font-black text-white"
+          className="mr-2.5 grid size-7 place-items-center self-center rounded-full bg-black text-sm font-black text-white hover:bg-rank focus-visible:bg-rank focus-visible:outline-none"
         >
           ×
         </button>
@@ -173,12 +166,12 @@ function PodiumSpot({ row, champion, className = '' }: { row: Row; champion?: bo
   const { fighter, rank } = row
   return (
     <li
-      className={`stripes relative flex flex-col items-center gap-2 rounded-2xl px-2 pb-3 text-center shadow-lift md:gap-3 md:px-4 md:pb-5 ${medals[rank - 1]} ${
+      className={`stripes relative flex flex-col items-center gap-2 rounded-2xl border-[3px] border-black px-2 pb-3 text-center shadow-lift md:gap-3 md:px-4 md:pb-5 ${medals[rank - 1]} ${
         champion ? 'pt-4 md:pt-6' : className
       }`}
       style={{ order: rank === 1 ? 2 : rank === 2 ? 1 : 3 }}
     >
-      <span className="absolute -top-[18px] left-1/2 grid size-10 -translate-x-1/2 place-items-center rounded-full bg-slate text-xl font-black text-white italic shadow-lift-sm md:-top-6 md:size-12 md:text-2xl">
+      <span className="outlined absolute -top-[18px] left-1/2 grid size-10 -translate-x-1/2 place-items-center rounded-full border-[3px] border-white bg-black text-xl font-black italic md:-top-6 md:size-12 md:text-2xl">
         {rank}
       </span>
       <Medallion
@@ -191,7 +184,7 @@ function PodiumSpot({ row, champion, className = '' }: { row: Row; champion?: bo
       >
         {fighter.name}
       </strong>
-      <span className="rounded-full bg-slate px-3 py-0.5 text-lg font-black text-white tabular-nums md:px-4 md:py-1 md:text-2xl">
+      <span className="rounded-full bg-black px-3 py-0.5 text-lg font-black text-white tabular-nums md:px-4 md:py-1 md:text-2xl">
         {formatNumber(fighter.elo)}
       </span>
     </li>
@@ -206,7 +199,7 @@ function ClosestCalls({ calls }: { calls: ClosestCall[] }) {
         {calls.map((c) => (
           <li
             key={`${c.left.id}~${c.right.id}`}
-            className="flex min-w-0 flex-col gap-2 rounded-2xl bg-card p-3 shadow-lift-sm"
+            className="flex min-w-0 flex-col gap-2 rounded-2xl border-[3px] border-black bg-card p-3 shadow-lift-sm"
           >
             <div className="flex justify-between gap-4 text-[1.05rem] leading-[1.25] font-black italic">
               <span className="truncate text-corner-l">{c.left.name}</span>
@@ -247,7 +240,7 @@ function StandingsTable({ rows, showCategory }: { rows: Row[]; showCategory: boo
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div aria-hidden="true" className={`${columns} hidden rounded-xl bg-slate py-2 pr-4 text-[.8125rem] font-bold text-white md:grid`}>
+      <div aria-hidden="true" className={`${columns} hidden rounded-xl bg-black py-2 pr-4 text-[.8125rem] font-bold text-white md:grid`}>
         <span className="text-center">Rank</span>
         <span className="col-span-2">Fighter</span>
         <span>Record</span>
@@ -261,9 +254,9 @@ function StandingsTable({ rows, showCategory }: { rows: Row[]; showCategory: boo
           return (
             <li
               key={f.id}
-              className={`${columns} min-h-[62px] rounded-xl bg-card pr-3.5 shadow-lift-sm md:pr-4`}
+              className={`${columns} min-h-[62px] rounded-xl border-[3px] border-black bg-card pr-3.5 shadow-lift-sm md:pr-4`}
             >
-              <span className="segment grid self-stretch rounded-l-xl text-center text-[1.45rem] leading-none font-black italic tabular-nums place-items-center">
+              <span className="segment grid self-stretch rounded-l-[9px] text-center text-[1.45rem] leading-none font-black italic tabular-nums place-items-center">
                 {rank}
               </span>
               <FighterFace fighter={f} />
@@ -280,7 +273,7 @@ function StandingsTable({ rows, showCategory }: { rows: Row[]; showCategory: boo
                 {formatNumber(f.wins)}–{formatNumber(f.losses)}
               </span>
               <span className="hidden items-center gap-2.5 md:flex">
-                <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-panel">
+                <span className="h-3 flex-1 overflow-hidden rounded-full border-2 border-black bg-panel">
                   <span className="stripes block h-full bg-rank" style={{ width: `${winRate}%` }} />
                 </span>
                 <span className="w-9 text-right text-sm font-black tabular-nums">{winRate}%</span>

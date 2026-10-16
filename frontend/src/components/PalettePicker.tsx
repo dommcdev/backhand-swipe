@@ -14,9 +14,9 @@ export function PalettePicker() {
           aria-label={p.name}
           aria-pressed={current === p.id}
           onClick={() => setPalette(p.id)}
-          className="press h-9 w-14 -skew-x-10 rounded-lg shadow-lift-sm outline-offset-3 aria-pressed:outline-3 aria-pressed:outline-fg"
+          className="press relative h-9 w-14 -skew-x-10 rounded-lg border-[3px] border-black bg-black shadow-lift-sm after:absolute after:-bottom-3.5 after:left-1/2 after:h-1.5 after:w-7 after:-translate-x-1/2 after:rounded-full after:bg-fg after:opacity-0 aria-pressed:after:opacity-100"
         >
-          <span className="flex size-full overflow-hidden rounded-lg">
+          <span className="flex size-full overflow-hidden rounded-[5px]">
             {p.swatch.map((color) => (
               <span key={color} className="flex-1" style={{ background: color }} />
             ))}

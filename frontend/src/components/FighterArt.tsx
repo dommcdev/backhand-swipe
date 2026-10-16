@@ -24,7 +24,7 @@ export function FighterArt({ fighter }: { fighter: Fighter }) {
 
   if (!fighter.emoji) {
     return (
-      <span className="grid size-24 place-items-center rounded-full bg-white text-4xl font-black text-black shadow-lift-sm">
+      <span className="grid size-24 place-items-center rounded-full border-[3px] border-black bg-white text-4xl font-black text-black shadow-lift-sm">
         {initials(fighter.name)}
       </span>
     )
@@ -39,7 +39,7 @@ export function FighterArt({ fighter }: { fighter: Fighter }) {
         ))}
       </div>
       {fighter.count > shown && (
-        <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 -rotate-4 rounded-lg bg-slate px-2 py-0.5 text-lg font-black whitespace-nowrap text-white italic shadow-lift-sm">
+        <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 -rotate-4 rounded-lg border-2 border-white bg-black px-2 py-0.5 text-lg font-black whitespace-nowrap text-white italic">
           ×{formatNumber(fighter.count)}
         </span>
       )}
@@ -59,7 +59,7 @@ export function FighterFace({ fighter }: { fighter: Fighter }) {
   return (
     <span
       aria-hidden="true"
-      className="grid size-11 shrink-0 place-items-center rounded-lg bg-panel text-[1.7rem] leading-none text-fg"
+      className="grid size-11 shrink-0 place-items-center rounded-xl border-2 border-black bg-white text-[1.7rem] leading-none text-black"
     >
       <FighterGlyph fighter={fighter} />
     </span>
@@ -70,18 +70,20 @@ export function Monogram({ name, className = '' }: { name: string; className?: s
   return (
     <span
       aria-hidden="true"
-      className={`grid size-10 shrink-0 place-items-center rounded-full text-[.95rem] font-black ${className}`}
+      className={`grid size-10 shrink-0 place-items-center rounded-full border-2 border-black text-[.95rem] font-black ${className}`}
     >
       {initials(name)}
     </span>
   )
 }
 
-/** A round badge for fighter art, like the art circle on a game's main menu. */
+/** A round badge with a black and a white ring, like the art circle on a game's main menu. */
 export function Medallion({ className = '', children }: { className?: string; children: React.ReactNode }) {
   return (
-    <span aria-hidden="true" className={`grid shrink-0 rounded-full bg-card p-[5px] shadow-lift-sm ${className}`}>
-      <span className="grid size-full place-items-center rounded-full bg-panel leading-none text-fg">{children}</span>
+    <span aria-hidden="true" className={`grid shrink-0 rounded-full bg-black p-[5px] shadow-lift-sm ${className}`}>
+      <span className="grid size-full rounded-full bg-white p-[3px]">
+        <span className="grid size-full place-items-center rounded-full bg-panel leading-none text-fg">{children}</span>
+      </span>
     </span>
   )
 }

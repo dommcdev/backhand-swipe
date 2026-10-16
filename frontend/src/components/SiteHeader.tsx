@@ -3,9 +3,9 @@ import { NavTabs } from './NavTabs'
 
 export function SiteHeader() {
   return (
-    <header className="bg-slate text-white">
+    <header className="bg-black text-white">
       <div className="mx-auto flex h-16 max-w-[1180px] items-center justify-between gap-8 px-[18px] md:h-[84px] md:px-10">
-        <Link to="/" className="flex items-center gap-2.5 text-inherit no-underline">
+        <Link to="/" className="flex items-center gap-2.5 text-inherit no-underline decoration-3 underline-offset-4 focus-visible:underline focus-visible:outline-none">
           <Emblem />
           <span className="text-[1.6rem] leading-none font-black tracking-[-.02em] italic md:text-[1.9rem]">
             Backhand Swipe

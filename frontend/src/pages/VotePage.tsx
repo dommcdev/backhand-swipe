@@ -20,7 +20,7 @@ function tally({ matchup, call }: LastCall) {
 }
 
 function verdictText(last: LastCall | null) {
-  if (!last) return 'Drag the card toward whoever wins, or use the arrow keys.'
+  if (!last) return 'Drag toward the winner, or use the arrow keys.'
   if (last.call === 'skip') return 'Skipped. That one doesn’t count.'
 
   const picked = last.call === 'left' ? last.matchup.left : last.matchup.right
@@ -90,15 +90,15 @@ export function VotePage() {
         })}
 
         {!current && error && (
-          <div className="absolute inset-x-0 top-0 bottom-7 flex flex-col items-center justify-center gap-3.5 rounded-[22px] bg-card p-6 text-center shadow-lift">
+          <div className="absolute inset-x-0 top-0 bottom-7 flex flex-col items-center justify-center gap-3.5 rounded-[22px] border-[3px] border-black bg-card p-6 text-center shadow-lift">
             <h2 className="m-0 text-[2.2rem] leading-none font-black italic">No fights loaded</h2>
             <p className="m-0 max-w-[28ch] leading-snug">{error.message}</p>
             <button
               type="button"
               onClick={retry}
-              className="press stripes rounded-xl bg-vote px-5 py-2.5 shadow-lift-sm"
+              className="press stripes rounded-xl border-[3px] border-black bg-vote px-5 py-2.5 shadow-lift-sm"
             >
-              <span className="text-xl font-black text-white italic">Try again</span>
+              <span className="outlined text-xl font-black italic">Try again</span>
             </button>
           </div>
         )}
@@ -109,7 +109,7 @@ export function VotePage() {
         type="button"
         disabled={!current}
         onClick={() => topCard.current?.decide('skip')}
-        className="press max-w-[7.5ch] justify-self-center rounded-xl bg-card px-2.5 py-1.5 text-[.8125rem] leading-tight font-bold shadow-lift-sm [grid-area:skip] lg:max-w-none lg:px-4 lg:py-2"
+        className="press stripes max-w-[7.5ch] justify-self-center rounded-xl border-[3px] border-black bg-slate px-2.5 py-1.5 text-[.8125rem] leading-tight font-bold text-white shadow-lift-sm [grid-area:skip] lg:max-w-none lg:px-4 lg:py-2"
       >
         Can’t call it
       </button>
@@ -126,12 +126,12 @@ function VerdictBar({ last }: { last: LastCall | null }) {
   const total = leftVotes + rightVotes
   const leftPct = total ? percent(leftVotes, total) : 50
   const shown = total ? '' : 'opacity-0'
-  const pct = `outlined relative w-14 shrink-0 text-[1.2rem] font-black italic tabular-nums transition-opacity duration-300 lg:w-20 lg:text-[1.5rem] ${shown}`
+  const pct = `outlined relative w-12 shrink-0 text-[1.05rem] font-black italic tabular-nums transition-opacity duration-300 lg:w-20 lg:text-[1.5rem] ${shown}`
 
   return (
     <section
       aria-live="polite"
-      className="relative flex h-[4.5rem] items-center overflow-hidden rounded-2xl bg-slate px-3 shadow-lift-sm [grid-area:verdict] lg:h-[4.25rem] lg:px-5"
+      className="relative flex h-[4.5rem] items-center overflow-hidden rounded-2xl border-[3px] border-black bg-black px-3 shadow-lift-sm [grid-area:verdict] lg:h-[4.25rem] lg:px-5"
     >
       <div aria-hidden="true" className={`absolute inset-0 flex gap-1 transition-opacity duration-300 ${shown}`}>
         <span
@@ -141,7 +141,7 @@ function VerdictBar({ last }: { last: LastCall | null }) {
         <span className="stripes grow bg-corner-r" />
       </div>
       <span aria-hidden="true" className={pct}>{leftPct}%</span>
-      <p className="relative m-0 line-clamp-2 flex-1 text-center text-[.9375rem] leading-snug font-bold text-white [paint-order:stroke_fill] [-webkit-text-stroke:3px_var(--slate)] lg:text-[1.05rem]">
+      <p className="relative m-0 line-clamp-2 flex-1 text-center text-[.9375rem] leading-snug font-bold text-white [paint-order:stroke_fill] [-webkit-text-stroke:3px_#000] lg:text-[1.05rem]">
         {verdictText(last)}
       </p>
       <span aria-hidden="true" className={`${pct} text-right`}>{100 - leftPct}%</span>
@@ -165,21 +165,17 @@ function PickButton({ side, fighter, onPick }: PickButtonProps) {
       disabled={!fighter}
       aria-label={fighter ? `${fighter.name} wins` : undefined}
       onClick={onPick}
-      className={`press stripes flex h-16 items-stretch rounded-2xl shadow-lift-sm disabled:opacity-50 lg:h-[180px] lg:w-full lg:max-w-[250px] lg:shadow-lift ${
+      className={`press stripes flex h-16 items-center gap-1.5 rounded-2xl border-[3px] border-black px-2 shadow-lift-sm disabled:opacity-50 lg:h-[180px] lg:w-full lg:max-w-[250px] lg:flex-col lg:justify-between lg:p-5 lg:shadow-lift ${
         isLeft
-          ? 'bg-corner-l text-left [grid-area:left] lg:justify-self-end'
-          : 'flex-row-reverse bg-corner-r text-right [grid-area:right] lg:justify-self-start'
+          ? 'bg-corner-l text-left [grid-area:left] lg:items-start lg:justify-self-end'
+          : 'flex-row-reverse bg-corner-r text-right [grid-area:right] lg:items-end lg:justify-self-start'
       }`}
     >
-      <span
-        className={`grid w-10 shrink-0 place-items-center bg-slate text-white lg:w-14 ${isLeft ? 'cut rounded-l-2xl' : 'cut-end rounded-r-2xl'}`}
-      >
+      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-black text-white lg:size-12">
         <Chevron direction={side} />
       </span>
       <span
-        className={`outlined flex flex-1 items-center px-2 leading-[1.1] font-black text-balance italic lg:items-end lg:px-4 lg:pb-5 ${isLeft ? '' : 'justify-end'} ${
-          long ? 'text-[.9rem] lg:text-[1.5rem]' : 'text-[1.05rem] lg:text-[1.9rem]'
-        }`}
+        className={`outlined leading-[1.1] font-black text-balance italic ${long ? 'text-[.9rem] lg:text-[1.5rem]' : 'text-[1.05rem] lg:text-[1.9rem]'}`}
       >
         {fighter?.name}
       </span>

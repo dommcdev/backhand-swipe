@@ -19,7 +19,7 @@ export function SplitBar({ leftLabel, rightLabel, leftVotes, rightVotes, classNa
     <div
       role="img"
       aria-label={total ? `${leftLabel} ${leftPct}%, ${rightLabel} ${rightPct}%` : 'No vote yet'}
-      className={`flex gap-[3px] overflow-hidden rounded-full bg-slate shadow-lift-sm ${className}`}
+      className={`flex gap-1 overflow-hidden rounded-full border-[3px] border-black bg-black shadow-lift-sm ${className}`}
     >
       <span
         className="stripes flex min-w-14 items-center bg-corner-l pl-3.5 transition-[flex-basis] duration-500 ease-[cubic-bezier(.2,.8,.2,1)]"
