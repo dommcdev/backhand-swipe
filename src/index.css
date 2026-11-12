@@ -1,371 +1,938 @@
-@import 'tailwindcss';
-
-@theme inline {
-  --color-bg: var(--bg);
-  --color-card: var(--card);
-  --color-panel: var(--panel);
-  --color-slate: var(--slate);
-  --color-line: var(--line);
-  --color-fg: var(--fg);
-  --color-muted: var(--muted);
-  --color-vote: var(--vote);
-  --color-rank: var(--rank);
-  --color-me: var(--me);
-  --color-corner-l: var(--corner-l);
-  --color-corner-r: var(--corner-r);
-  --color-up: var(--up);
-  --font-body: 'Rubik Variable', system-ui, sans-serif;
-  --shadow-lift: 0 6px 0 rgb(0 0 0 / 0.28);
-  --shadow-lift-sm: 0 4px 0 rgb(0 0 0 / 0.28);
-}
-
 /*
- * Palettes. Each sets the page and panel colors, one color per section (vote, rankings,
- * where do I rank), the two fighter corners, and the background art.
+ * Backhand Swipe, as built in the Visual Studio forms designer by someone in week six of
+ * Intro to Programming. Every control keeps its default look. No web fonts, no animations.
  */
+
 :root,
-[data-theme='main-menu'] {
-  --bg: #e2e7eb;
-  --card: #fff;
-  --panel: #d9e2e8;
-  --slate: #2c3842;
-  --line: #34414b;
-  --fg: #1d2830;
-  --muted: #5a6873;
-  --vote: #e8131b;
-  --rank: #1478f0;
-  --me: #ff8a00;
-  --corner-l: #e8131b;
-  --corner-r: #1478f0;
-  --up: #11a23b;
-  --art:
-    radial-gradient(150% 100% at 50% -20%, rgb(255 255 255 / 0.85) 0 55%, transparent 55.1%),
-    repeating-linear-gradient(-60deg, rgb(0 0 0 / 0.045) 0 3px, transparent 3px 16px);
+[data-theme='control'] {
+  --form: #f0f0f0;
+  --page: #fff;
+}
+[data-theme='light-pink'] {
+  --form: #ffb6c1;
+  --page: #ffb6c1;
+}
+[data-theme='pale-green'] {
+  --form: #98fb98;
+  --page: #98fb98;
+}
+[data-theme='light-sky-blue'] {
+  --form: #87cefa;
+  --page: #87cefa;
+}
+[data-theme='khaki'] {
+  --form: #f0e68c;
+  --page: #f0e68c;
 }
 
-[data-theme='after-dark'] {
-  --bg: #161b21;
-  --card: #222a32;
-  --panel: #2d3740;
-  --slate: #000;
-  --line: #4a5763;
-  --fg: #f1f4f7;
-  --muted: #9aa8b4;
-  --vote: #ff2a6d;
-  --rank: #00a8ff;
-  --me: #ffc400;
-  --corner-l: #ff2a6d;
-  --corner-r: #00a8ff;
-  --up: #2fd25c;
-  --art:
-    radial-gradient(55% 60% at 0% 35%, rgb(255 42 109 / 0.3), transparent),
-    radial-gradient(55% 60% at 100% 35%, rgb(0 168 255 / 0.3), transparent),
-    repeating-conic-gradient(from 0deg at 50% 0%, rgb(255 255 255 / 0.05) 0 5deg, transparent 5deg 12deg);
+:root {
+  --highlight: #0078d7;
+  --sans: 'Microsoft Sans Serif', 'MS Sans Serif', Tahoma, 'Liberation Sans', Arial, sans-serif;
+  --ui: 'Segoe UI', system-ui, sans-serif;
+  color-scheme: light;
 }
 
-[data-theme='vault'] {
-  --bg: #f8c4dc;
-  --card: #fff;
-  --panel: #fbe0ec;
-  --slate: #4a1d3c;
-  --line: #5c2a4c;
-  --fg: #33122a;
-  --muted: #7c4a6c;
-  --vote: #ec2c8c;
-  --rank: #8a2be2;
-  --me: #00a99d;
-  --corner-l: #ff5a1f;
-  --corner-r: #00a99d;
-  --up: #0c8a4a;
-  --art:
-    radial-gradient(rgb(255 255 255 / 0.6) 10px, transparent 10.5px) 0 0 / 52px 52px,
-    radial-gradient(rgb(255 255 255 / 0.6) 10px, transparent 10.5px) 26px 26px / 52px 52px;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-[data-theme='ultraviolet'] {
-  --bg: #cfc1ff;
-  --card: #fff;
-  --panel: #e6deff;
-  --slate: #2a1f5c;
-  --line: #372a70;
-  --fg: #1c1442;
-  --muted: #554a8a;
-  --vote: #7b2ff0;
-  --rank: #e0198a;
-  --me: #ff7a00;
-  --corner-l: #ff2d6f;
-  --corner-r: #5a2ee6;
-  --up: #0e8a4c;
-  --art: repeating-conic-gradient(from 45deg, rgb(255 255 255 / 0.3) 0 25%, transparent 0 50%) 0 0 / 46px 46px;
+html,
+body {
+  margin: 0;
 }
 
-[data-theme='online'] {
-  --bg: #ffcf8f;
-  --card: #fff;
-  --panel: #ffe6c4;
-  --slate: #43230b;
-  --line: #573014;
-  --fg: #2e1706;
-  --muted: #7d5230;
-  --vote: #ff6a00;
-  --rank: #6a2cd8;
-  --me: #e8131b;
-  --corner-l: #ff3b1f;
-  --corner-r: #6a2cd8;
-  --up: #0c7a32;
-  --art: repeating-radial-gradient(circle at 0% 100%, rgb(255 255 255 / 0.4) 0 16px, transparent 16px 44px);
+body {
+  font: 11px/1.3 var(--sans);
+  color: #000;
+  background: #1f63a8;
+  -webkit-font-smoothing: none;
 }
 
-[data-theme='greenroom'] {
-  --bg: #b9ecc8;
-  --card: #fff;
-  --panel: #dcf5e3;
-  --slate: #123524;
-  --line: #1d4631;
-  --fg: #0d2619;
-  --muted: #3f6a52;
-  --vote: #13a838;
-  --rank: #1e40d6;
-  --me: #ff7a00;
-  --corner-l: #ff7a00;
-  --corner-r: #1e40d6;
-  --up: #0b7a2e;
-  --art:
-    linear-gradient(rgb(0 0 0 / 0.08) 2px, transparent 2px) 0 0 / 36px 36px,
-    linear-gradient(90deg, rgb(0 0 0 / 0.08) 2px, transparent 2px) 0 0 / 36px 36px;
+[hidden] {
+  display: none !important;
 }
 
-[data-theme='skyline'] {
-  --bg: #9fd6ff;
-  --card: #fff;
-  --panel: #d8eeff;
-  --slate: #0f2d4d;
-  --line: #1a3d62;
-  --fg: #0a213a;
-  --muted: #3f6285;
-  --vote: #e8131b;
-  --rank: #0a4fc9;
-  --me: #ffb000;
-  --corner-l: #e8131b;
-  --corner-r: #24206e;
-  --up: #0b7a32;
-  --art: repeating-conic-gradient(from -3deg at 50% 115%, rgb(255 255 255 / 0.32) 0 5deg, transparent 5deg 13deg);
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
 }
 
-@layer base {
-  html {
-    background: var(--art), var(--bg);
-    background-attachment: fixed;
-    color: var(--fg);
-    -webkit-font-smoothing: antialiased;
-  }
-  body {
-    font-family: var(--font-body);
-    margin: 0;
-    overflow-x: hidden;
-  }
-  button {
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  :focus-visible {
-    outline: 3px solid currentColor;
-    outline-offset: 3px;
-  }
-  input[type='number'] {
-    -moz-appearance: textfield;
-  }
-  input::-webkit-outer-spin-button,
-  input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
+u {
+  text-decoration-thickness: 1px;
 }
 
-/* Matches the page background exactly, so sticky bars cover content without looking like a band. */
-@utility bg-page {
-  background: var(--art), var(--bg);
-  background-attachment: fixed;
+p {
+  margin: 0;
 }
 
-/* White lettering with a heavy black outline, like a fighting-game menu label. */
-@utility outlined {
+/* Desktop and window */
+
+.desktop {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 20px 20px 60px;
+}
+
+.window {
+  display: flex;
+  flex-direction: column;
+  width: 880px;
+  height: 640px;
+  max-width: 100%;
+  max-height: calc(100dvh - 80px);
+  border: 1px solid #1883d7;
+  background: var(--form);
+  box-shadow: 0 7px 28px rgb(0 0 0 / 0.45);
+}
+
+.window.maximized {
+  position: fixed;
+  inset: 0 0 40px;
+  width: auto;
+  height: auto;
+  max-height: none;
+  border: 0;
+}
+
+.titlebar {
+  display: flex;
+  height: 30px;
+  flex-shrink: 0;
+  align-items: center;
+  background: #fff;
+  user-select: none;
+}
+
+.titlebar > svg {
+  margin: 0 7px 0 8px;
+}
+
+.titlebar .title {
+  flex: 1;
+  overflow: hidden;
+  font: 12px var(--ui);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.caption-btn {
+  display: grid;
+  width: 46px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #000;
+}
+
+.caption-btn:hover {
+  background: #e5e5e5;
+}
+
+.caption-btn.close:hover {
+  background: #e81123;
   color: #fff;
-  -webkit-text-stroke: 0.17em #000;
-  paint-order: stroke fill;
-  text-shadow: 0 0.08em 0 #000;
 }
 
-/* Diagonal sheen over a solid fill. */
-@utility stripes {
-  background-image: repeating-linear-gradient(-60deg, rgb(255 255 255 / 0.14) 0 8px, transparent 8px 18px);
+.caption-btn:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -3px;
 }
 
-/* A right edge cut on an angle. */
-@utility cut {
-  clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
-  padding-right: 18px;
+/* MenuStrip */
+
+.menustrip {
+  display: flex;
+  height: 24px;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 0 2px;
+  background: linear-gradient(#fbfbfb, #f2f2f2);
 }
 
-/* A black label segment whose right edge is cut on an angle. It merges with a black border around it. */
-@utility segment {
-  background-color: #000;
-  color: #fff;
-  clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
-  padding-right: 18px;
+.menu {
+  position: relative;
 }
 
-/* The same segment for the end of a row, cut on its left edge so both cuts run parallel. */
-@utility segment-end {
-  background-color: #000;
-  color: #fff;
-  clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%);
-  padding-left: 18px;
+.menu-title {
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  background: transparent;
 }
 
-@layer components {
-  /*
-   * Swipe deck. --lean-l and --lean-r go from 0 to 1 on the card being dragged.
-   * --drag is set on the deck, so the cards underneath rise to meet it as it moves away.
-   */
-  .swipe-card {
-    transform-origin: 50% 100%;
-    transition:
-      transform 0.4s cubic-bezier(0.2, 0.9, 0.25, 1.05),
-      opacity 0.35s;
-    --lean-l: 0;
-    --lean-r: 0;
-  }
-  .swipe-card[data-pos='1'] {
-    transform: translateY(calc(14px - 10px * var(--drag, 0))) scale(calc(0.955 + 0.03 * var(--drag, 0)));
-  }
-  .swipe-card[data-pos='2'] {
-    transform: translateY(calc(28px - 10px * var(--drag, 0))) scale(calc(0.91 + 0.03 * var(--drag, 0)));
-  }
-  .swipe-card .card-body {
-    transition: opacity 0.3s ease-out 0.05s;
-  }
-  .swipe-card[data-pos='1'] .card-body {
-    opacity: calc(var(--drag, 0) * 0.85);
-    transition-delay: 0s;
-  }
-  .swipe-card[data-pos='2'] .card-body {
-    opacity: 0;
-  }
-
-  .corner {
-    position: absolute;
-    inset-block: 0;
-    width: 56%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 8px;
-    padding-block: 18px 14px;
-    transition: filter 0.2s;
-  }
-  .corner-l {
-    left: 0;
-    background-color: var(--corner-l);
-    clip-path: polygon(0 0, 100% 0, 79% 100%, 0 100%);
-    padding-inline: 14px 13%;
-    filter: saturate(calc(1 - var(--lean-r))) brightness(calc(1 - var(--lean-r) * 0.4));
-  }
-  .corner-r {
-    right: 0;
-    background-color: var(--corner-r);
-    clip-path: polygon(23% 0, 100% 0, 100% 100%, 2% 100%);
-    padding-inline: 13% 14px;
-    filter: saturate(calc(1 - var(--lean-l))) brightness(calc(1 - var(--lean-l) * 0.4));
-  }
-
-  .stamp {
-    position: absolute;
-    top: 14px;
-    padding: 5px 12px 7px;
-    font-weight: 900;
-    font-style: italic;
-    font-size: 1.5rem;
-    line-height: 1;
-    white-space: nowrap;
-    pointer-events: none;
-    border-radius: 10px;
-    background: linear-gradient(115deg, #ff9a00, #ffe341);
-    box-shadow:
-      0 0 0 3px #000,
-      0 5px 0 3px rgb(0 0 0 / 0.35);
-  }
-  .corner-l .stamp {
-    left: 12px;
-    transform: rotate(-8deg) scale(calc(0.7 + var(--lean-l) * 0.3));
-    opacity: var(--lean-l);
-  }
-  .corner-r .stamp {
-    right: 12px;
-    transform: rotate(8deg) scale(calc(0.7 + var(--lean-r) * 0.3));
-    opacity: var(--lean-r);
-  }
-
-  .crowd {
-    filter: drop-shadow(0 4px 0 rgb(0 0 0 / 0.3));
-  }
-}
-
-/*
- * Hover brightens a control, pressing pushes it in, and keyboard focus lifts it off the page.
- * These rules sit outside any layer so they win over the shadow utilities on the same element.
- */
-.press {
-  transition:
-    translate 0.08s ease-out,
-    box-shadow 0.08s ease-out,
-    filter 0.08s ease-out;
-}
-@media (hover: hover) {
-  .press:not(:disabled):hover {
-    filter: brightness(1.08);
-  }
-}
-.press:not(:disabled):focus-visible {
+.menu-title:hover,
+.menu-title:focus-visible {
+  border-color: #99d1ff;
+  background: #cce8ff;
   outline: none;
-  translate: 0 -3px;
-  box-shadow: 0 7px 0 rgb(0 0 0 / 0.3);
-}
-.press:not(:disabled):active {
-  translate: 0 2px;
-  box-shadow: 0 1px 0 rgb(0 0 0 / 0.3);
 }
 
-.settings-panel {
-  transition:
-    opacity 0.12s ease-out,
-    translate 0.12s ease-out,
-    display 0.12s allow-discrete,
-    overlay 0.12s allow-discrete;
+.menu-title[aria-expanded='true'] {
+  border-color: #ccc;
+  border-bottom-color: #f5f5f5;
+  background: #f5f5f5;
 }
-.settings-panel:not(:popover-open) {
-  opacity: 0;
-  translate: 0 -6px;
+
+.dropdown {
+  position: absolute;
+  z-index: 50;
+  top: 100%;
+  left: 0;
+  display: flex;
+  min-width: 210px;
+  flex-direction: column;
+  padding: 2px;
+  border: 1px solid #ccc;
+  background: linear-gradient(to right, #f1f1f1 0 25px, #fff 25px);
+  box-shadow: 2px 2px 3px rgb(0 0 0 / 0.3);
 }
-@starting-style {
-  .settings-panel:popover-open {
-    opacity: 0;
-    translate: 0 -6px;
+
+.dropdown button {
+  display: flex;
+  height: 22px;
+  align-items: center;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dropdown button:enabled:hover,
+.dropdown button:enabled:focus-visible {
+  border-color: #99d1ff;
+  background: #cce8ff;
+  outline: none;
+}
+
+.dropdown button:disabled {
+  color: #a0a0a0;
+}
+
+.dropdown .check {
+  width: 22px;
+  text-align: center;
+}
+
+.dropdown .grow {
+  flex: 1;
+  padding-left: 6px;
+}
+
+.dropdown .shortcut {
+  padding: 0 8px 0 30px;
+}
+
+.dropdown hr {
+  width: calc(100% - 28px);
+  margin: 3px 0 3px 28px;
+  border: 0;
+  border-top: 1px solid #d7d7d7;
+}
+
+/* TabControl */
+
+.tabcontrol {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  padding: 8px 12px 10px;
+}
+
+.tabs {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-end;
+  padding-left: 2px;
+}
+
+.tab {
+  position: relative;
+  margin-left: -1px;
+  padding: 2px 7px 3px;
+  border: 1px solid #d9d9d9;
+  border-bottom: 0;
+  background: #f0f0f0;
+  color: #000;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  border-color: #7eb4ea;
+  background: #d8eaf9;
+}
+
+.tab[aria-current='page'] {
+  z-index: 1;
+  margin: 0 -2px -1px -3px;
+  padding: 3px 9px 5px;
+  border-color: #d9d9d9;
+  background: var(--page);
+}
+
+.tab:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+.tabpage {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid #d9d9d9;
+  background: var(--page);
+}
+
+/* StatusStrip and taskbar */
+
+.statusstrip {
+  display: flex;
+  height: 22px;
+  flex-shrink: 0;
+  align-items: center;
+  padding-left: 6px;
+  border-top: 1px solid #dadada;
+  background: #f0f0f0;
+}
+
+.statusstrip .grow {
+  flex: 1;
+}
+
+.statusstrip .panel {
+  padding: 0 10px;
+  border-left: 1px solid #c8c8c8;
+}
+
+.statusstrip .grip {
+  width: 12px;
+  height: 12px;
+  margin: 6px 2px 0 4px;
+  background: radial-gradient(circle, #a0a0a0 1px, transparent 1.5px) 0 0 / 4px 4px;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+.taskbar {
+  position: fixed;
+  z-index: 10;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  height: 40px;
+  align-items: stretch;
+  padding-left: 8px;
+  background: #101010;
+  color: #fff;
+  font: 12px var(--ui);
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #fff;
+}
+
+.task.active {
+  border-bottom-color: #76b9ed;
+  background: rgb(255 255 255 / 0.1);
+}
+
+.task:hover {
+  background: rgb(255 255 255 / 0.16);
+}
+
+.clock {
+  display: grid;
+  margin-left: auto;
+  padding: 0 14px;
+  place-items: center;
+}
+
+/* Common controls */
+
+.btn {
+  min-width: 75px;
+  height: 23px;
+  padding: 0 8px;
+  border: 1px solid #adadad;
+  border-radius: 0;
+  background: #e1e1e1;
+}
+
+.btn:enabled:hover {
+  border-color: var(--highlight);
+  background: #e5f1fb;
+}
+
+.btn:enabled:active {
+  border-color: #005499;
+  background: #cce4f7;
+}
+
+.btn:focus-visible,
+.btn.default {
+  border-color: var(--highlight);
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--highlight);
+}
+
+.btn:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -4px;
+}
+
+.btn:disabled {
+  border-color: #bfbfbf;
+  background: #ccc;
+  color: #838383;
+}
+
+.btn.big {
+  height: auto;
+  min-height: 34px;
+  padding: 4px 8px;
+}
+
+.textbox {
+  height: 23px;
+  min-width: 0;
+  padding: 1px 3px;
+  border: 1px solid #7a7a7a;
+  border-radius: 0;
+  background: #fff;
+  appearance: none;
+}
+
+.textbox:hover {
+  border-color: #171717;
+}
+
+.textbox:focus {
+  border-color: var(--highlight);
+  outline: none;
+}
+
+.combobox {
+  height: 23px;
+  padding: 0 22px 0 4px;
+  border: 1px solid #adadad;
+  border-radius: 0;
+  background: #e1e1e1 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M.5.5 4 4 7.5.5' fill='none' stroke='%23000'/%3E%3C/svg%3E")
+    no-repeat right 7px center;
+  appearance: none;
+}
+
+.combobox:hover,
+.combobox:focus {
+  border-color: var(--highlight);
+  background-color: #e5f1fb;
+  outline: none;
+}
+
+.groupbox {
+  min-width: 0;
+  margin: 0;
+  padding: 4px 8px 8px;
+  border: 1px solid #dcdcdc;
+}
+
+.groupbox legend {
+  margin-left: -2px;
+  padding: 0 2px;
+}
+
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 14px;
+}
+
+.radio input {
+  margin: 0;
+}
+
+.progress {
+  height: 23px;
+  border: 1px solid #bcbcbc;
+  background: #e6e6e6;
+}
+
+.progress > div {
+  height: 100%;
+  background: #06b025;
+}
+
+.small {
+  margin-top: 3px;
+}
+
+.picturebox {
+  position: relative;
+  display: grid;
+  height: 140px;
+  place-items: center;
+  overflow: hidden;
+  background: var(--form);
+  box-shadow:
+    inset 1px 1px #a0a0a0,
+    inset -1px -1px #fff,
+    inset 2px 2px #696969,
+    inset -2px -2px #e3e3e3;
+}
+
+.picturebox img {
+  max-width: calc(100% - 8px);
+  max-height: 132px;
+  object-fit: contain;
+}
+
+.picturebox .emoji {
+  font-size: 84px;
+  line-height: 1;
+}
+
+.picturebox .initials {
+  font-size: 48px;
+  font-weight: bold;
+}
+
+/* A label with BackColor = Info. Close enough to a tooltip. */
+.picturebox .count {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  padding: 0 3px;
+  border: 1px solid #767676;
+  background: #ffffe1;
+}
+
+.glyph {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  font-size: 13px;
+  line-height: 16px;
+  object-fit: contain;
+  text-align: center;
+  vertical-align: -4px;
+}
+
+.listbox {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid #828790;
+  background: #fff;
+  list-style: none;
+}
+
+.listbox li {
+  padding: 0 3px;
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.listbox li[aria-selected='true'] {
+  background: var(--highlight);
+  color: #fff;
+}
+
+/* MessageBox */
+
+.msgbox {
+  min-width: 300px;
+  max-width: min(440px, calc(100vw - 24px));
+  padding: 0;
+  border: 1px solid #1883d7;
+  background: #fff;
+  box-shadow: 0 7px 28px rgb(0 0 0 / 0.45);
+}
+
+.msgbox .title {
+  padding-left: 10px;
+}
+
+.msgbox::backdrop {
+  background: transparent;
+}
+
+.msgbox-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 24px 28px 24px 12px;
+}
+
+.msgbox-body p {
+  padding-top: 8px;
+  white-space: pre-line;
+}
+
+.msgbox-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px;
+  background: #f0f0f0;
+}
+
+.sysicon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: #1e64c8;
+  color: #fff;
+  font: bold 20px Georgia, serif;
+}
+
+.sysicon.error {
+  background: #e81123;
+  font: 16px var(--ui);
+}
+
+.sysicon.warning {
+  padding-top: 8px;
+  border-radius: 0;
+  background: #fcd116;
+  color: #000;
+  font: bold 18px var(--ui);
+  clip-path: polygon(50% 2%, 100% 96%, 0 96%);
+}
+
+/* Vote tab */
+
+.vote {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fighters {
+  display: grid;
+  min-height: 300px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.fighter h2 {
+  margin: 6px 0 4px;
+  font-size: 16px;
+}
+
+.fighter dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 6px;
+  margin: 0;
+}
+
+.fighter dd {
+  margin: 0;
+}
+
+/* ForeColor = Red, Font = Comic Sans MS, 24pt, style = Bold. */
+.vs {
+  align-self: center;
+  color: red;
+  font: bold 32px 'Comic Sans MS', 'Comic Neue', 'Chalkboard SE', 'Comic Sans', cursive;
+}
+
+.fighters .wide {
+  grid-column: 1 / -1;
+}
+
+.fighters .wide .btn {
+  margin-top: 8px;
+}
+
+.loading {
+  grid-column: 1 / -1;
+}
+
+.pick-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.result p:first-of-type {
+  margin-bottom: 6px;
+}
+
+/* Rankings tab */
+
+.rankings {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbar #search {
+  width: 180px;
+  margin-right: 10px;
+}
+
+.rankings-body {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 10px;
+}
+
+.datagrid {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid #828790;
+  background: #ababab;
+}
+
+.datagrid table {
+  border-collapse: collapse;
+  background: #fff;
+  cursor: default;
+}
+
+.datagrid th,
+.datagrid td {
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid #a0a0a0;
+  font-weight: normal;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.datagrid th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  min-width: 50px;
+  background: #fff;
+  box-shadow: inset 0 -1px #a0a0a0;
+}
+
+.datagrid .rowheader {
+  width: 41px;
+  min-width: 41px;
+  background: #fff;
+  color: #000;
+  font-size: 9px;
+}
+
+.datagrid tr[aria-selected='true'] td:not(.rowheader) {
+  background: var(--highlight);
+  color: #fff;
+}
+
+.side {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.top3,
+.closest {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.top3 li {
+  margin: 3px 0;
+}
+
+.closest li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 8px;
+}
+
+/* Where do I rank tab */
+
+.rankme {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.rankme-left,
+.groupbox-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-grid,
+.results {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 2px 0 0;
+}
+
+.results dd {
+  margin: 0;
+  font-weight: bold;
+}
+
+.pair {
+  display: flex;
+  gap: 4px;
+}
+
+.pair .textbox {
+  width: 50%;
+}
+
+.groupbox-form .btn {
+  align-self: flex-start;
+}
+
+.ladder {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ladder .listbox {
+  flex: 1;
+}
+
+/* Phones get the window stretched to fit, the way it looks when someone opens the .exe on a tablet. */
+@media (max-width: 759px) {
+  body {
+    font-size: 13px;
   }
-}
 
-@keyframes slot {
-  from {
-    transform: scaleY(0.3);
-    opacity: 0;
+  .desktop {
+    display: block;
+    padding: 0;
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
+  .window,
+  .window.maximized {
+    position: static;
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+    max-height: none;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .titlebar .caption-btn:not(.close),
+  .taskbar {
+    display: none;
+  }
+
+  .tabcontrol {
+    padding: 6px 6px 8px;
+  }
+
+  .tabpage {
+    overflow: visible;
+    padding: 8px;
+  }
+
+  .textbox,
+  .combobox {
+    height: 28px;
+    font-size: 16px;
+  }
+
+  .fighters {
+    gap: 4px;
+  }
+
+  .fighter dl {
+    grid-template-columns: 1fr;
+  }
+
+  .fighter dd {
+    margin-bottom: 4px;
+  }
+
+  .fighter h2 {
+    font-size: 14px;
+  }
+
+  .picturebox {
+    height: 110px;
+  }
+
+  .picturebox .emoji {
+    font-size: 64px;
+  }
+
+  .vs {
+    font-size: 20px;
+  }
+
+  .pick-row .btn {
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .rankings,
+  .rankme {
+    height: auto;
+  }
+
+  .rankings-body,
+  .rankme {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .datagrid {
+    max-height: 60vh;
+  }
+
+  .ladder .listbox {
+    height: 320px;
+    flex: none;
+  }
+
+  .listbox li {
+    line-height: 20px;
   }
 }

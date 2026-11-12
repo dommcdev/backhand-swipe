@@ -30,11 +30,11 @@ Add `--remote` to any `db:` command to run it on the deployed database instead o
 
 ## Code
 
-- `src/` is the React app (Vite, TypeScript, Tailwind).
+- `src/` is the React app (Vite, TypeScript, plain CSS). It is styled as a default WinForms app: a `Form1` window with a MenuStrip, TabControl, DataGridView, and MessageBoxes. No web fonts, no animations.
   - `src/pages/` has one component per screen: vote, rankings, and where do I rank.
-  - `src/components/` holds shared pieces such as the swipe card, the header, and the vote split bar.
+  - `src/components/win.tsx` holds the fake Windows controls: MenuStrip, MessageBox, ProgressBar, and PictureBox. `src/lib/messageBox.ts` has `messageBox()`, which works like `MessageBox.Show`.
   - `src/api/types.ts` has the types and the REST contract. The Worker imports them too, so both sides stay in sync.
-  - `src/index.css` defines the palettes. Each palette sets CSS variables (`--bg`, `--panel`, `--corner-l`, `--corner-r`, and so on) that Tailwind exposes as `bg-panel`, `text-corner-l`, etc. The menu-style pieces (`stripes`, `outlined`, `cut`, `segment`, `press`) live there too. The palette and units are chosen from the settings menu and saved to localStorage.
+  - `src/index.css` has all the styles. The BackColor choices (`--form`, `--page`) and units are picked from the View menu and saved to localStorage.
 - `worker/` is the API. `app.ts` routes `/api` requests and `api.ts` has the queries behind each endpoint.
 - `db/schema.sql` creates the tables: `fighter`, `matchup`, `vote`, and `fighter_rating_snapshot`.
 - `scripts/db.ts` creates the tables and imports fighters from a CSV. `scripts/images.ts` makes fighter images.
