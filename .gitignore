@@ -44,3 +44,6 @@ dist-ssr
 
 # skills
 .agents/
+
+# Fighter images are uploaded by `bun run deploy` from your machine but not tracked.
+public/fighters/*

@@ -71,6 +71,8 @@ fighter_id,name,short_name,category,quantity,emoji,image_url,weight_kg,height_cm
 
 `bun run images photo.png cat` shrinks the image to a small WebP at `public/fighters/cat.webp`. Transparent backgrounds look best. Several fighters can share one image, like "5 house cats" and "20 house cats". Images are served as static assets, which Cloudflare doesn't charge for.
 
+Images aren't tracked in git. `bun run deploy` uploads whatever is in `public/fighters/`, and each deploy replaces the last, so only deploy from a machine that has every image. Otherwise the missing ones disappear from the live site.
+
 ## Deploying
 
 One-time setup:
