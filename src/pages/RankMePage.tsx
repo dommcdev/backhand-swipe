@@ -209,7 +209,7 @@ function Ladder({ fighters, youElo, you, units }: LadderProps) {
   }
 
   const youAt = rows.findIndex((r) => r.id === 'you')
-  const [start, end] = showAll ? [0, rows.length - 1] : youAt === -1 ? [0, 9] : [Math.max(0, youAt - 4), Math.min(rows.length - 1, youAt + 4)]
+  const [start, end] = showAll ? [0, rows.length - 1] : youAt === -1 ? [0, Math.min(rows.length - 1, 9)] : [Math.max(0, youAt - 4), Math.min(rows.length - 1, youAt + 4)]
   const items: LadderItem[] = []
   if (start > 0) items.push({ kind: 'row', row: rows[0], rank: 1 })
   if (start > 1) items.push({ kind: 'gap', id: 'gap-above', hidden: start - 1 })
