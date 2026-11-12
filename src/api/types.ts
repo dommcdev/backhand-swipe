@@ -56,7 +56,7 @@ export interface Rankings {
 }
 
 /**
- * REST contract, implemented in backend/src/server.ts:
+ * REST contract, implemented in worker/app.ts:
  *
  *   GET  /api/matchups?count=5           -> Matchup[]
  *   POST /api/votes        VoteRequest   -> 204 No Content

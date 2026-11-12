@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS matchup (
 CREATE INDEX IF NOT EXISTS matchup_fighter_b_idx ON matchup (fighter_b_id);
 
 -- winner_id must be one of the matchup's two fighters. A foreign key can't express that,
--- so the vote transaction in backend/src/api.ts checks it.
+-- so the vote transaction in worker/api.ts checks it.
 CREATE TABLE IF NOT EXISTS vote (
   vote_id    INTEGER PRIMARY KEY,
   matchup_id INTEGER NOT NULL REFERENCES matchup ON DELETE CASCADE,

@@ -1,26 +1,37 @@
-import { createClient, type InStatement } from '@libsql/client'
 import { parse } from 'csv-parse/sync'
 import { readFileSync } from 'node:fs'
 
 // Usage:
-//   bun run db:migrate                     create any missing tables
-//   bun run db:import <file.csv> [--prune] add or update fighters from a CSV
-//   bun run db:reset [--yes]               delete everything and recreate the tables
+//   bun run db:migrate [--remote]                     create any missing tables
+//   bun run db:import <file.csv> [--prune] [--remote] add or update fighters from a CSV
+//   bun run db:reset [--remote --yes]                 delete everything and recreate the tables
 //
-// Connects to TURSO_DATABASE_URL with TURSO_AUTH_TOKEN, read from backend/.env. To target another
-// database, pass an env file: bun --env-file=.env.production run db:import fighters.csv
+// Works on the local D1 database that `bun run dev` uses, or the deployed one with --remote.
+// Everything goes through `wrangler d1 execute`.
 
-const url = process.env.TURSO_DATABASE_URL
-if (!url) {
-  console.error('TURSO_DATABASE_URL is not set. Copy .env.example to .env.')
-  process.exit(1)
+const remote = process.argv.includes('--remote')
+console.log(`Database: ${remote ? 'remote (deployed)' : 'local'}`)
+
+/** Runs SQL with wrangler and returns the rows of each statement. */
+function sql(sql: string): Record<string, unknown>[][] {
+  const proc = Bun.spawnSync(
+    ['bunx', 'wrangler', 'd1', 'execute', 'DB', remote ? '--remote' : '--local', '--json', '--yes', `--command=${sql}`],
+    { stderr: 'inherit' },
+  )
+  const out = proc.stdout.toString()
+  if (!proc.success) {
+    console.error(out)
+    process.exit(1)
+  }
+  return (JSON.parse(out) as { results: Record<string, unknown>[] }[]).map((r) => r.results)
 }
-const isLocal = /^(http|ws)s?:\/\/(127\.0\.0\.1|localhost)|^file:/.test(url)
-const db = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN || undefined })
-console.log(`Database: ${url}`)
+
+/** Writes a value as a SQL literal. The CSV is the only input and is validated first. */
+const literal = (v: string | number | null) =>
+  v === null ? 'NULL' : typeof v === 'number' ? String(v) : `'${v.replaceAll("'", "''")}'`
 
 const schema = readFileSync(new URL('../db/schema.sql', import.meta.url), 'utf8')
-const migrate = () => db.executeMultiple(schema)
+const migrate = () => sql(schema)
 
 const COLUMNS = [
   'fighter_id',
@@ -76,7 +87,7 @@ function toFighter(record: Record<string, string>): { values: Record<Column, Val
   return { values, errors }
 }
 
-async function importCsv(path: string, prune: boolean) {
+function importCsv(path: string, prune: boolean) {
   const records: Record<string, string>[] = parse(readFileSync(path), {
     columns: true,
     bom: true,
@@ -111,15 +122,15 @@ async function importCsv(path: string, prune: boolean) {
     process.exit(1)
   }
 
-  await migrate()
+  migrate()
   const ids = fighters.map((f) => f.fighter_id as string)
-  const existing = new Set((await db.execute('SELECT fighter_id FROM fighter')).rows.map((r) => r.fighter_id as string))
+  const existing = new Set(sql('SELECT fighter_id FROM fighter')[0].map((r) => r.fighter_id as string))
   const stale = [...existing].filter((id) => !seen.has(id))
 
-  const statements: InStatement[] = fighters.map((args) => ({
-    sql: `
+  const statements = fighters.map(
+    (values) => `
       INSERT INTO fighter (${COLUMNS.join(', ')})
-      VALUES (${COLUMNS.map((c) => `:${c}`).join(', ')})
+      VALUES (${COLUMNS.map((c) => literal(values[c])).join(', ')})
       ON CONFLICT (fighter_id) DO UPDATE SET
         name          = excluded.name,
         short_name    = excluded.short_name,
@@ -133,13 +144,9 @@ async function importCsv(path: string, prune: boolean) {
         secret_weapon = excluded.secret_weapon,
         weakness      = excluded.weakness
     `,
-    args,
-  }))
+  )
   if (prune && stale.length) {
-    statements.push({
-      sql: `DELETE FROM fighter WHERE fighter_id NOT IN (SELECT value FROM json_each(:ids))`,
-      args: { ids: JSON.stringify(ids) },
-    })
+    statements.push(`DELETE FROM fighter WHERE fighter_id NOT IN (${ids.map(literal).join(', ')})`)
   }
   statements.push(
     // One matchup for every pair of fighters. OR IGNORE skips pairs that already exist.
@@ -149,7 +156,7 @@ async function importCsv(path: string, prune: boolean) {
     `INSERT OR IGNORE INTO fighter_rating_snapshot (snapshot_date, fighter_id, elo)
      SELECT date('now'), fighter_id, elo FROM fighter`,
   )
-  await db.batch(statements, 'write')
+  sql(statements.join(';\n'))
 
   const added = ids.filter((id) => !existing.has(id)).length
   console.log(`Imported ${fighters.length} fighters: ${added} new, ${fighters.length - added} updated.`)
@@ -164,32 +171,32 @@ async function importCsv(path: string, prune: boolean) {
 }
 
 const [command, ...args] = process.argv.slice(2)
+const file = args.find((a) => !a.startsWith('--'))
 
 if (command === 'migrate') {
-  await migrate()
-} else if (command === 'import' && args[0]) {
-  await importCsv(args[0], args.includes('--prune'))
+  migrate()
+} else if (command === 'import' && file) {
+  importCsv(file, args.includes('--prune'))
 } else if (command === 'reset') {
-  if (!isLocal && !args.includes('--yes')) {
-    console.error('This deletes every fighter and vote in a remote database. Run again with --yes if you mean it.')
+  if (remote && !args.includes('--yes')) {
+    console.error('This deletes every fighter and vote in the deployed database. Run again with --yes if you mean it.')
     process.exit(1)
   }
-  await db.executeMultiple(`
+  sql(`
     DROP TABLE IF EXISTS fighter_rating_snapshot;
     DROP TABLE IF EXISTS vote;
     DROP TABLE IF EXISTS matchup;
     DROP TABLE IF EXISTS fighter;
   `)
-  await migrate()
+  migrate()
 } else {
-  console.error('Usage: bun scripts/db.ts <migrate | import <file.csv> [--prune] | reset [--yes]>')
+  console.error('Usage: bun scripts/db.ts <migrate | import <file.csv> [--prune] | reset [--yes]> [--remote]')
   process.exit(1)
 }
 
-const { rows } = await db.execute(`
+const [[counts]] = sql(`
   SELECT (SELECT count(*) FROM fighter) AS fighters,
          (SELECT count(*) FROM matchup) AS matchups,
          (SELECT count(*) FROM vote) AS votes
 `)
-console.log(`Now: ${rows[0].fighters} fighters, ${rows[0].matchups} matchups, ${rows[0].votes} votes`)
-db.close()
+console.log(`Now: ${counts.fighters} fighters, ${counts.matchups} matchups, ${counts.votes} votes`)

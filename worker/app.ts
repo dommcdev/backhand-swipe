@@ -1,10 +1,9 @@
-import type { Client } from '@libsql/client'
-import type { Category } from '../../frontend/src/api/types'
+import type { Category } from '../src/api/types'
 import { BadRequest, getMatchups, getRankings, vote } from './api'
 
 const noStore = { 'Cache-Control': 'no-store' }
 
-async function route(request: Request, db: Client): Promise<Response> {
+async function route(request: Request, db: D1Database): Promise<Response> {
   const url = new URL(request.url)
   const method = request.method
 
@@ -22,8 +21,8 @@ async function route(request: Request, db: Client): Promise<Response> {
   return Response.json({ error: 'Not found' }, { status: 404 })
 }
 
-/** Handles /api requests. Shared by the Worker and the local Bun dev server. */
-export async function handleApi(request: Request, db: Client): Promise<Response> {
+/** Handles /api requests. Everything else is served from the built app before reaching the Worker. */
+export async function handleApi(request: Request, db: D1Database): Promise<Response> {
   try {
     return await route(request, db)
   } catch (err) {

@@ -1,6 +1,7 @@
-import type { Client, Row } from '@libsql/client'
-import type { Category, ClosestCall, Fighter, Matchup, RankedFighter, Rankings, VoteRequest } from '../../frontend/src/api/types'
-import { winChance } from '../../frontend/src/lib/elo'
+import type { Category, ClosestCall, Fighter, Matchup, RankedFighter, Rankings, VoteRequest } from '../src/api/types'
+import { winChance } from '../src/lib/elo'
+
+type Row = Record<string, unknown>
 
 export const categories: Category[] = ['people', 'fictional', 'animals', 'objects']
 
@@ -25,15 +26,16 @@ const toFighter = (row: Row): Fighter => ({
   weakness: row.weakness as string,
 })
 
-export async function getMatchups(db: Client, count: number): Promise<Matchup[]> {
+export async function getMatchups(db: D1Database, count: number): Promise<Matchup[]> {
   if (!Number.isInteger(count) || count < 1 || count > 20) throw new BadRequest('count must be from 1 to 20')
 
   // One row per fighter: two rows for each picked matchup. MATERIALIZED makes both halves
   // of the UNION see the same random picks.
-  const { rows } = await db.execute({
-    sql: `
+  const { results: rows } = await db
+    .prepare(
+      `
       WITH picked AS MATERIALIZED (
-        SELECT matchup_id, fighter_a_id, fighter_b_id FROM matchup ORDER BY random() LIMIT :count
+        SELECT matchup_id, fighter_a_id, fighter_b_id FROM matchup ORDER BY random() LIMIT ?1
       ),
       tally AS (
         SELECT p.matchup_id,
@@ -53,8 +55,9 @@ export async function getMatchups(db: Client, count: number): Promise<Matchup[]>
       JOIN tally t ON t.matchup_id = p.matchup_id
       JOIN fighter f ON f.fighter_id = p.fighter_b_id
     `,
-    args: { count },
-  })
+    )
+    .bind(count)
+    .run<Row>()
 
   const sides = new Map<number, { fighter: Fighter; votes: number }[]>()
   for (const row of rows) {
@@ -76,21 +79,22 @@ const isVoteRequest = (body: unknown): body is VoteRequest =>
   'winnerId' in body &&
   typeof body.winnerId === 'string'
 
-export async function vote(db: Client, body: unknown) {
+export async function vote(db: D1Database, body: unknown) {
   if (!isVoteRequest(body)) throw new BadRequest('Expected { matchupId: number, winnerId: string }')
   const { matchupId, winnerId } = body
 
-  const { rows } = await db.execute({
-    sql: `
+  const m = await db
+    .prepare(
+      `
       SELECT m.fighter_a_id, m.fighter_b_id, a.elo AS a_elo, b.elo AS b_elo
       FROM matchup m
       JOIN fighter a ON a.fighter_id = m.fighter_a_id
       JOIN fighter b ON b.fighter_id = m.fighter_b_id
-      WHERE m.matchup_id = :matchupId
+      WHERE m.matchup_id = ?1
     `,
-    args: { matchupId },
-  })
-  const m = rows[0]
+    )
+    .bind(matchupId)
+    .first<Row>()
   if (!m || (winnerId !== m.fighter_a_id && winnerId !== m.fighter_b_id)) {
     throw new BadRequest(`${winnerId} is not in matchup ${matchupId}`)
   }
@@ -100,27 +104,25 @@ export async function vote(db: Client, body: unknown) {
 
   // The ratings were read outside this write so votes never wait on each other. Both updates are
   // increments, so a vote that lands in between is never lost; at worst this delta is computed
-  // from a rating that is a few milliseconds old.
-  await db.batch(
-    [
-      { sql: 'INSERT INTO vote (matchup_id, winner_id) VALUES (:matchupId, :winnerId)', args: { matchupId, winnerId } },
-      { sql: 'UPDATE fighter SET elo = elo + :delta WHERE fighter_id = :id', args: { delta, id: m.fighter_a_id } },
-      { sql: 'UPDATE fighter SET elo = elo + :delta WHERE fighter_id = :id', args: { delta: -delta, id: m.fighter_b_id } },
-    ],
-    'write',
-  )
+  // from a rating that is a few milliseconds old. A batch runs as one transaction.
+  const addElo = db.prepare('UPDATE fighter SET elo = elo + ?1 WHERE fighter_id = ?2')
+  await db.batch([
+    db.prepare('INSERT INTO vote (matchup_id, winner_id) VALUES (?1, ?2)').bind(matchupId, winnerId),
+    addElo.bind(delta, m.fighter_a_id),
+    addElo.bind(-delta, m.fighter_b_id),
+  ])
 }
 
-export async function getRankings(db: Client, category?: Category): Promise<Rankings> {
+export async function getRankings(db: D1Database, category?: Category): Promise<Rankings> {
   if (category !== undefined && !categories.includes(category)) throw new BadRequest(`Unknown category ${category}`)
   const only = category ?? null
 
-  const [ranked, closest, total] = await db.batch(
-    [
-      {
-        sql: `
+  const [ranked, closest, total] = await db.batch<Row>([
+    db
+      .prepare(
+        `
           WITH scope AS (
-            SELECT * FROM fighter WHERE :category IS NULL OR category = :category
+            SELECT * FROM fighter WHERE ?1 IS NULL OR category = ?1
           ),
           tally AS (
             SELECT m.fighter_a_id,
@@ -157,10 +159,11 @@ export async function getRankings(db: Client, category?: Category): Promise<Rank
           LEFT JOIN last_week lw ON lw.fighter_id = f.fighter_id
           ORDER BY f.elo DESC, f.fighter_id
         `,
-        args: { category: only },
-      },
-      {
-        sql: `
+      )
+      .bind(only),
+    db
+      .prepare(
+        `
           SELECT m.fighter_a_id,
                  m.fighter_b_id,
                  count(*) FILTER (WHERE v.winner_id = m.fighter_a_id) AS a_votes,
@@ -169,20 +172,18 @@ export async function getRankings(db: Client, category?: Category): Promise<Rank
           JOIN matchup m ON m.matchup_id = v.matchup_id
           JOIN fighter a ON a.fighter_id = m.fighter_a_id
           JOIN fighter b ON b.fighter_id = m.fighter_b_id
-          WHERE :category IS NULL OR (a.category = :category AND b.category = :category)
+          WHERE ?1 IS NULL OR (a.category = ?1 AND b.category = ?1)
           GROUP BY m.matchup_id
-          HAVING count(*) >= :minVotes
+          HAVING count(*) >= ?2
           ORDER BY abs(a_votes - b_votes) * 1.0 / count(*), count(*) DESC
           LIMIT 3
         `,
-        args: { category: only, minVotes: CLOSEST_CALL_MIN_VOTES },
-      },
-      'SELECT count(*) AS total FROM vote',
-    ],
-    'read',
-  )
+      )
+      .bind(only, CLOSEST_CALL_MIN_VOTES),
+    db.prepare('SELECT count(*) AS total FROM vote'),
+  ])
 
-  const fighters: RankedFighter[] = ranked.rows.map((row) => ({
+  const fighters: RankedFighter[] = ranked.results.map((row) => ({
     ...toFighter(row),
     elo: row.elo as number,
     wins: row.wins as number,
@@ -190,20 +191,24 @@ export async function getRankings(db: Client, category?: Category): Promise<Rank
     rankChange: row.rank_change as number,
   }))
   const byId = new Map(fighters.map((f) => [f.id, f]))
-  const closestCalls: ClosestCall[] = closest.rows.map((row) => ({
+  const closestCalls: ClosestCall[] = closest.results.map((row) => ({
     left: byId.get(row.fighter_a_id as string)!,
     right: byId.get(row.fighter_b_id as string)!,
     leftVotes: row.a_votes as number,
     rightVotes: row.b_votes as number,
   }))
 
-  return { totalVotes: total.rows[0].total as number, fighters, closestCalls }
+  return { totalVotes: total.results[0].total as number, fighters, closestCalls }
 }
 
 /** Records today's ratings. Only the first snapshot each day is kept, so "this week" compares against that. */
-export async function takeSnapshot(db: Client) {
-  await db.execute(`
+export async function takeSnapshot(db: D1Database) {
+  await db
+    .prepare(
+      `
     INSERT OR IGNORE INTO fighter_rating_snapshot (snapshot_date, fighter_id, elo)
     SELECT date('now'), fighter_id, elo FROM fighter
-  `)
+  `,
+    )
+    .run()
 }

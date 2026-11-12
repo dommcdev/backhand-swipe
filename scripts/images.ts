@@ -2,7 +2,7 @@ import { basename, extname } from 'node:path'
 import sharp from 'sharp'
 
 // Usage: bun run images <image> [name]
-// Converts any image to a small WebP in frontend/public/fighters/<name>.webp. The name defaults to the
+// Converts any image to a small WebP in public/fighters/<name>.webp. The name defaults to the
 // file name. Several fighters can share one image, e.g. cat-5 and cat-20 can both use /fighters/cat.webp.
 
 const SIZE = 384
@@ -17,7 +17,7 @@ if (!/^[a-z0-9-]+$/.test(name)) {
   process.exit(1)
 }
 
-const out = new URL(`../../frontend/public/fighters/${name}.webp`, import.meta.url).pathname
+const out = new URL(`../public/fighters/${name}.webp`, import.meta.url).pathname
 const info = await sharp(input)
   .trim()
   .resize(SIZE, SIZE, { fit: 'inside', withoutEnlargement: true })
@@ -25,4 +25,4 @@ const info = await sharp(input)
   .toFile(out)
 
 console.log(`Wrote ${out} (${info.width}x${info.height}, ${Math.round(info.size / 1024)} KB)`)
-console.log(`In backend/db/seed.sql, set image_url to '/fighters/${name}.webp'`)
+console.log(`In the fighters CSV, set image_url to /fighters/${name}.webp`)

@@ -1,17 +1,20 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "backhand-swipe",
-  "main": "src/worker.ts",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-11-11",
   "assets": {
-    // Build the frontend first: `bun run build` in ../frontend.
-    "directory": "../frontend/dist",
+    // The Vite plugin fills in the directory with the built app.
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
-  "secrets": {
-    "required": ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"]
-  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "backhand-swipe"
+      // database_id is added by `bunx wrangler d1 create backhand-swipe --binding DB --update-config`.
+    }
+  ],
   "triggers": {
     // Daily rating snapshot for the "This week" column. Times are UTC.
     "crons": ["0 0 * * *"]
