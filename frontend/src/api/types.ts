@@ -29,7 +29,7 @@ export interface RankedFighter extends Fighter {
 }
 
 export interface Matchup {
-  id: string
+  id: number
   left: Fighter
   right: Fighter
   /** Head-to-head votes so far, so the result can be shown the instant someone votes. */
@@ -38,7 +38,7 @@ export interface Matchup {
 }
 
 export interface VoteRequest {
-  matchupId: string
+  matchupId: number
   winnerId: string
 }
 
@@ -56,7 +56,7 @@ export interface Rankings {
 }
 
 /**
- * Proposed REST contract for the Java backend:
+ * REST contract, implemented in backend/src/server.ts:
  *
  *   GET  /api/matchups?count=5           -> Matchup[]
  *   POST /api/votes        VoteRequest   -> 204 No Content

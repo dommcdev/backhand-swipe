@@ -1,5 +1,4 @@
-import { mockApi } from './mock'
-import type { BackhandApi } from './types'
+import type { BackhandApi, Matchup } from './types'
 
 async function request(path: string, init?: RequestInit) {
   const res = await fetch(`/api${path}`, {
@@ -12,11 +11,20 @@ async function request(path: string, init?: RequestInit) {
   return res
 }
 
-const liveApi: BackhandApi = {
-  getMatchups: (count) => request(`/matchups?count=${count}`).then((res) => res.json()),
+/** Starts downloading fighter art as soon as a batch arrives, so cards further down the deck are ready in time. */
+function preloadArt(matchups: Matchup[]) {
+  for (const { left, right } of matchups) {
+    for (const { imageUrl } of [left, right]) if (imageUrl) new Image().src = imageUrl
+  }
+  return matchups
+}
+
+export const api: BackhandApi = {
+  getMatchups: (count) =>
+    request(`/matchups?count=${count}`)
+      .then((res) => res.json())
+      .then(preloadArt),
   vote: (body) => request('/votes', { method: 'POST', body: JSON.stringify(body) }).then(() => undefined),
   getRankings: (category) =>
     request(category ? `/rankings?category=${category}` : '/rankings').then((res) => res.json()),
 }
-
-export const api: BackhandApi = import.meta.env.VITE_API_MODE === 'live' ? liveApi : mockApi

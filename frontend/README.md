@@ -11,11 +11,11 @@ bun run lint
 
 ## Data
 
-By default the app runs against an in-browser mock (`src/api/mock.ts`) with seed fighters in `src/api/mockData.ts`. Votes update Elo ratings in memory until the page reloads.
+The app calls `/api/...`, which the Vite dev server proxies to the backend Worker on `http://localhost:8787`. Start the backend first; see the [root README](../README.md).
 
-To call the Java backend instead, create `.env.local` with `VITE_API_MODE=live`. Requests go to `/api/...`, which the Vite dev server proxies to `http://localhost:8080`.
+The REST contract is documented at the bottom of `src/api/types.ts`. The backend imports these types too, so both sides stay in sync.
 
-The REST contract the backend needs to implement is documented at the bottom of `src/api/types.ts`.
+Fighter images live in `public/fighters/`.
 
 ## Layout
 

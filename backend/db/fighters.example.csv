@@ -1,0 +1,6 @@
+fighter_id,name,short_name,category,quantity,emoji,image_url,weight_kg,height_cm,age,secret_weapon,weakness,elo
+tyson,Prime Mike Tyson,Tyson,people,1,🥊,,100,178,22,Peek-a-boo style,Ear-related distractions,1290
+arnold,"Arnold, 1977",Arnold,people,1,💪,,107,188,30,Five Mr. Olympia titles,Leg day pump,1240
+shrek,Shrek,Shrek,fictional,1,🧌,,200,,,Onion layers,Wants to be left alone,1300
+gorilla-5,5 gorillas,the gorillas,animals,5,🦍,/fighters/gorilla.webp,160,,,Can open hatches,Easily bored,1520
+tank,1 tank,the tank,objects,1,,/fighters/tank.svg,62000,,,120 mm cannon,Tight corners,1720

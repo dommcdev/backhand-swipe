@@ -1,35 +1,9 @@
-##### Backend Stuff #####
-target/
-!**/src/main/**/target/
-!**/src/test/**/target/
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
 ### IntelliJ IDEA ###
 .idea
 *.iws
 *.iml
 *.ipr
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-
-##### Frontend Stuff #####
 logs
 *.log
 npm-debug.log*
@@ -47,6 +21,8 @@ dist-ssr
 ##### Additions #####
 .env*
 !.env.example
+.dev.vars*
+.wrangler/
 *.pem
 *.key
 *.cert

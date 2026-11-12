@@ -24,4 +24,4 @@ export function ordinal(n: number) {
   return n + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0])
 }
 
-export const percent = (part: number, whole: number) => Math.round((part / whole) * 100)
+export const percent = (part: number, whole: number) => (whole ? Math.round((part / whole) * 100) : 0)

@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "backhand-swipe",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-11-11",
+  "assets": {
+    // Build the frontend first: `bun run build` in ../frontend.
+    "directory": "../frontend/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "secrets": {
+    "required": ["TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"]
+  },
+  "triggers": {
+    // Daily rating snapshot for the "This week" column. Times are UTC.
+    "crons": ["0 0 * * *"]
+  },
+  "observability": {
+    "enabled": true,
+    "traces": { "enabled": true }
+  }
+}

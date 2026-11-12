@@ -85,7 +85,9 @@ export function RankingsPage() {
           <SectionTitle id="standings">
             {query ? `${matches.length} ${matches.length === 1 ? 'match' : 'matches'}` : 'Standings'}
           </SectionTitle>
-          <p className="m-0 text-sm font-bold text-muted">{formatNumber(data.totalVotes)} votes cast</p>
+          <p className="m-0 text-sm font-bold text-muted">
+            {formatNumber(data.totalVotes)} {data.totalVotes === 1 ? 'vote' : 'votes'} cast
+          </p>
         </div>
 
         {matches.length > 0 ? (

@@ -12,8 +12,8 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      // Spring Boot's default port. Only used when VITE_API_MODE=live.
-      '/api': 'http://localhost:8080',
+      // `bun run dev` in backend/ runs the Worker here.
+      '/api': 'http://localhost:8787',
     },
   },
 })
