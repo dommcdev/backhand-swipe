@@ -88,5 +88,15 @@ The second command adds the database's id to `wrangler.jsonc`; commit that chang
 Then:
 
 - **Load fighters** into the live database: `bun run db:import fighters.csv --remote`. No redeploy needed.
-- **Deploy** code or image changes: `bun run deploy`. The site is at `https://backhand-swipe.<your-subdomain>.workers.dev`.
+- **Deploy** code or image changes: `bun run deploy`. The site is at `https://backhandswipe.com` (complete the domain setup below first). The default `workers.dev` URL is disabled.
 - **Read logs**: `bunx wrangler tail`, or the Cloudflare dashboard.
+
+### Domain setup
+
+`backhandswipe.com` was purchased through Cloudflare Registrar, so its nameservers and Cloudflare DNS zone are already set up. No registrar changes or manual DNS records are needed.
+
+1. Confirm the domain is **Active** in the same Cloudflare account as the Worker.
+2. Run `bun run deploy`. The custom domain in `wrangler.jsonc` tells Cloudflare to create the DNS record and HTTPS certificate automatically.
+3. Verify `https://backhandswipe.com` once the certificate is ready.
+
+Only the root domain is configured; `www.backhandswipe.com` is not included.

@@ -3,6 +3,13 @@
   "name": "backhand-swipe",
   "main": "worker/index.ts",
   "compatibility_date": "2026-11-11",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "backhandswipe.com",
+      "custom_domain": true
+    }
+  ],
   "assets": {
     // The Vite plugin fills in the directory with the built app.
     "not_found_handling": "single-page-application",
