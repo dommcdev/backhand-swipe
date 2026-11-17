@@ -10,7 +10,7 @@ import { winChance } from '../src/lib/elo'
 //    (a Bradley-Terry fit). Vote order stops mattering, and early votes get re-weighed against
 //    everything since.
 
-/** Votes a fighter has been in before it counts as settled. */
+/** Votes a fighter has been in before it counts as settled. Matches fighter_unsettled_idx in db/schema.sql. */
 const SETTLED_GAMES = 10
 
 /** How unsure a fighter's rating is, from 1 (no votes) toward 0. */

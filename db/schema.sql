@@ -25,11 +25,17 @@ CREATE TABLE IF NOT EXISTS fighter (
   losses        INTEGER NOT NULL DEFAULT 0
 ) STRICT;
 
--- Rankings pages, overall and per category, and finding opponents with a similar rating.
+-- Rankings pages and finding opponents with a similar rating.
 CREATE INDEX IF NOT EXISTS fighter_elo_idx ON fighter (elo DESC, fighter_id);
-CREATE INDEX IF NOT EXISTS fighter_category_elo_idx ON fighter (category, elo DESC, fighter_id);
--- Matchmaking looks for fighters with the fewest votes.
-CREATE INDEX IF NOT EXISTS fighter_games_idx ON fighter (wins + losses);
+-- Every vote changes two fighters' elo and wins, and each index on those columns costs extra row
+-- writes per vote. Writes cost far more than reads, and a few hundred fighters are cheap to scan,
+-- so category pages scan the table instead of keeping an index.
+DROP INDEX IF EXISTS fighter_category_elo_idx;
+DROP INDEX IF EXISTS fighter_games_idx;
+-- Matchmaking favors fighters with fewer than 10 votes (SETTLED_GAMES in worker/ratings.ts). Only
+-- they are in this index, so votes on settled fighters don't write to it.
+-- Queries must repeat this exact WHERE clause for SQLite to use it.
+CREATE INDEX IF NOT EXISTS fighter_unsettled_idx ON fighter (wins + losses) WHERE wins + losses < 10;
 
 -- Head-to-head totals. A row appears the first time two fighters meet, so there is no table of
 -- every possible pair. fighter_a_id is always the smaller id.

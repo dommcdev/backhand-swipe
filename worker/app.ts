@@ -4,6 +4,19 @@ import { BadRequest, getMatchups, getRankings, getRoster, vote } from './api'
 const noStore = { 'Cache-Control': 'no-store' }
 /** The roster reads every fighter, so each Cloudflare location reuses it for this long. */
 const ROSTER_MAX_AGE = 300
+/** Rankings change with every vote, but a few seconds behind is fine, and it saves a read per visitor. */
+const RANKINGS_MAX_AGE = 30
+
+/** Serves `url` from this Cloudflare location's cache, or builds it and keeps it for `maxAge` seconds. */
+async function cached(url: string, maxAge: number, ctx: ExecutionContext, build: () => Promise<unknown>) {
+  const cache = caches.default
+  const key = new Request(url)
+  const hit = await cache.match(key)
+  if (hit) return hit
+  const response = Response.json(await build(), { headers: { 'Cache-Control': `public, max-age=${maxAge}` } })
+  ctx.waitUntil(cache.put(key, response.clone()))
+  return response
+}
 
 async function route(request: Request, db: D1Database, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url)
@@ -18,23 +31,18 @@ async function route(request: Request, db: D1Database, ctx: ExecutionContext): P
   }
   if (url.pathname === '/api/rankings' && method === 'GET') {
     const params = url.searchParams
-    const rankings = await getRankings(db, {
+    const request = {
       category: (params.get('category') ?? undefined) as Category | undefined,
       search: params.get('q') ?? undefined,
       offset: Number(params.get('offset') ?? 0),
-    })
-    return Response.json(rankings, { headers: noStore })
+    }
+    // Searches are too varied to be worth caching.
+    if (request.search?.trim()) return Response.json(await getRankings(db, request), { headers: noStore })
+    const key = `${url.origin}${url.pathname}?category=${request.category ?? ''}&offset=${request.offset}`
+    return cached(key, RANKINGS_MAX_AGE, ctx, () => getRankings(db, request))
   }
   if (url.pathname === '/api/roster' && method === 'GET') {
-    const cache = caches.default
-    const key = new Request(url.origin + url.pathname)
-    const hit = await cache.match(key)
-    if (hit) return hit
-    const response = Response.json(await getRoster(db), {
-      headers: { 'Cache-Control': `public, max-age=${ROSTER_MAX_AGE}` },
-    })
-    ctx.waitUntil(cache.put(key, response.clone()))
-    return response
+    return cached(url.origin + url.pathname, ROSTER_MAX_AGE, ctx, () => getRoster(db))
   }
   return Response.json({ error: 'Not found' }, { status: 404 })
 }

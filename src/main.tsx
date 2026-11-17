@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router'
-import { categories, matchupQueueQuery, rankingsQuery } from './api/queries.ts'
+import { matchupQueueQuery, rankingsQuery } from './api/queries.ts'
 import App from './App.tsx'
 import './index.css'
 import { RankingsPage } from './pages/RankingsPage.tsx'
@@ -37,8 +37,8 @@ await Promise.race([
   Promise.all([
     fontsReady,
     queryClient.prefetchQuery(matchupQueueQuery),
+    // Only the overall standings: category tabs load when opened, so most visits skip them.
     queryClient.prefetchInfiniteQuery(rankingsQuery()),
-    ...categories.map((c) => queryClient.prefetchInfiniteQuery(rankingsQuery(c))),
   ]),
   atMost(1500),
 ])

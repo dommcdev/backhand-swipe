@@ -88,7 +88,8 @@ export async function getMatchups(db: D1Database, count: number): Promise<Matchu
 
   // 1. Fighters with the fewest votes, plus some random ones.
   const [freshResult, ...randomResults] = await db.batch<Row>([
-    db.prepare(`${CANDIDATE_SQL} ORDER BY wins + losses LIMIT ?1`).bind(FRESH_POOL),
+    // Uses fighter_unsettled_idx. Once everyone has 10 votes this is empty and leads are random.
+    db.prepare(`${CANDIDATE_SQL} WHERE wins + losses < 10 ORDER BY wins + losses LIMIT ?1`).bind(FRESH_POOL),
     ...Array.from({ length: count * 2 }, () => randomFighter(db, max)),
   ])
   const fresh = freshResult.results.map(toCandidate)
@@ -237,7 +238,8 @@ export async function vote(db: D1Database, body: unknown) {
 // Rankings
 
 /** The snapshot "This week" compares against: the oldest one from the last 7 days. */
-const LAST_WEEK = `(SELECT min(snapshot_date) FROM fighter_rating_snapshot WHERE snapshot_date >= date('now', '-7 days'))`
+// ORDER BY ... LIMIT 1 stops at the first row; min() with a WHERE reads every row in range.
+const LAST_WEEK = `(SELECT snapshot_date FROM fighter_rating_snapshot WHERE snapshot_date >= date('now', '-7 days') ORDER BY snapshot_date LIMIT 1)`
 
 export async function getRankings(db: D1Database, request: RankingsRequest): Promise<Rankings> {
   const { category, offset = 0 } = request
@@ -246,7 +248,6 @@ export async function getRankings(db: D1Database, request: RankingsRequest): Pro
   if (!Number.isInteger(offset) || offset < 0) throw new BadRequest('offset must be a whole number')
   if (search.length > 100) throw new BadRequest('search is too long')
 
-  // Separate statements for "everyone" and one category, so each uses its own index.
   const scope = category ? 'WHERE f.category = ?1' : 'WHERE ?1 IS NULL'
   const lastRank = category ? 's.category_rank' : 's.rank'
   const page = search
@@ -264,12 +265,16 @@ export async function getRankings(db: D1Database, request: RankingsRequest): Pro
            LIMIT ?3 OFFSET ?4`,
         )
         .bind(category ?? null, search.replace(/[\\%_]/g, '\\$&'), RANKINGS_PAGE + 1, offset)
-    : db
+    : // Place is worked out below from the row order. A window function here would double the rows read.
+      db
         .prepare(
-          `SELECT f.*, ?2 + row_number() OVER (ORDER BY f.elo DESC, f.fighter_id) AS place, ${lastRank} AS last_rank
-           FROM (SELECT * FROM fighter f ${scope} ORDER BY f.elo DESC, f.fighter_id LIMIT ?3 OFFSET ?2) f
-           LEFT JOIN fighter_rating_snapshot s ON s.snapshot_date = ${LAST_WEEK} AND s.fighter_id = f.fighter_id
-           ORDER BY place`,
+          `SELECT f.*, (
+             SELECT ${lastRank} FROM fighter_rating_snapshot s
+             WHERE s.snapshot_date = ${LAST_WEEK} AND s.fighter_id = f.fighter_id
+           ) AS last_rank
+           FROM fighter f ${scope}
+           ORDER BY f.elo DESC, f.fighter_id
+           LIMIT ?3 OFFSET ?2`,
         )
         .bind(category ?? null, offset, RANKINGS_PAGE + 1)
 
@@ -308,7 +313,7 @@ export async function getRankings(db: D1Database, request: RankingsRequest): Pro
 
   return {
     totalVotes: total.results[0].total as number,
-    fighters: rows.map((r) => toRanked(r, r.place as number, r.last_rank)),
+    fighters: rows.map((r, i) => toRanked(r, (r.place as number | undefined) ?? offset + i + 1, r.last_rank)),
     closestCalls,
     nextOffset: pageRows.results.length > RANKINGS_PAGE ? offset + RANKINGS_PAGE : null,
   }
@@ -360,15 +365,22 @@ export async function refreshClosestCalls(db: D1Database, ifVotedInMinutes?: num
     })
     .sort((x, y) => x.gap - y.gap || y.n - x.n)
 
-  const insert = db.prepare('INSERT INTO closest_call (scope, place, fighter_a_id, fighter_b_id) VALUES (?1, ?2, ?3, ?4)')
-  const statements = [db.prepare('DELETE FROM closest_call')]
+  const picks: [string, number, string, string][] = []
   for (const scope of ['all', ...categories]) {
     const top = contested
       .filter(({ r }) => scope === 'all' || (r.a_category === scope && r.b_category === scope))
       .slice(0, 3)
-    top.forEach(({ r }, i) => statements.push(insert.bind(scope, i + 1, r.fighter_a_id, r.fighter_b_id)))
+    top.forEach(({ r }, i) => picks.push([scope, i + 1, r.fighter_a_id as string, r.fighter_b_id as string]))
   }
-  await db.batch(statements)
+
+  // Rewriting costs a row write per pick, so skip it when nothing changed.
+  const current = await db.prepare('SELECT scope, place, fighter_a_id, fighter_b_id FROM closest_call').run<Row>()
+  const key = (p: unknown[]) => p.join('|')
+  const before = new Set(current.results.map((r) => key([r.scope, r.place, r.fighter_a_id, r.fighter_b_id])))
+  if (before.size === picks.length && picks.every((p) => before.has(key(p)))) return
+
+  const insert = db.prepare('INSERT INTO closest_call (scope, place, fighter_a_id, fighter_b_id) VALUES (?1, ?2, ?3, ?4)')
+  await db.batch([db.prepare('DELETE FROM closest_call'), ...picks.map((p) => insert.bind(...p))])
 }
 
 /**

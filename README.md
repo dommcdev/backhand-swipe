@@ -46,11 +46,13 @@ Add `--remote` to any `db:` command to run it on the deployed database instead o
 D1 bills per row read, and the free tier allows 5 million a day. The rule: **every request reads a small, fixed number of rows through an index**, however many fighters and votes there are. `bunx wrangler d1 insights backhand-swipe --sort-by reads` shows which queries read the most.
 
 - **Totals live on the rows they describe.** A fighter has its `wins` and `losses`. `pair` has the head-to-head between two fighters, created the first time they meet, so there's no table of every possible pair. A vote updates the two fighters and their pair in one transaction. Nothing counts `vote` per request.
-- **Rankings load 50 at a time** through the `elo` indexes. Search is the exception: a name can match anywhere, so it reads every fighter in scope.
-- **"Where do I rank?"** needs the whole roster, so `/api/roster` is cached by Cloudflare for 5 minutes.
-- **Cron jobs do anything that needs to look at everything.** Hourly, if anyone voted: pick the closest calls into `closest_call`. Nightly: refit the ratings, then snapshot everyone's place into `fighter_rating_snapshot` for the "This week" column. Snapshots older than about a week are deleted.
+- **Writes cost far more than reads** (about 1000× on the paid plan, 50× on the free tier's daily limits). Every index on `elo` or `wins`/`losses` adds row writes to every vote, so `fighter` keeps only `fighter_elo_idx` and a partial index of fighters with under 10 votes. Category pages scan the few hundred fighters instead.
+- **Rankings load 50 at a time** through the `elo` index. Search is the exception: a name can match anywhere, so it reads every fighter in scope.
+- **Cloudflare caches** rankings (except searches) for 30 seconds and `/api/roster` for 5 minutes, so most visitors read nothing. The app only prefetches the overall rankings; category tabs load when opened.
+- **"Where do I rank?"** needs the whole roster, hence the longer cache.
+- **Cron jobs do anything that needs to look at everything.** Hourly, if anyone voted: pick the closest calls into `closest_call` (rewritten only if they changed). Nightly: refit the ratings, then snapshot everyone's place into `fighter_rating_snapshot` for the "This week" column. Snapshots older than about a week are deleted.
 
-Rough cost per request: a vote reads about 5 rows, a batch of matchups about 100, and a rankings page about 150.
+Rough cost per request: a vote reads 6 rows and writes 6 (8 while a fighter has under 10 votes), a batch of matchups reads about 100, and an uncached rankings page about 100–300.
 
 ### Local load test and row accounting
 
@@ -80,7 +82,7 @@ other account usage that day. A local passing run does not prove the free plan w
 
 `worker/ratings.ts` gets the most out of each vote:
 
-- **Matchmaking** builds most matchups around fighters with the fewest votes, against an opponent rated near them (found through the `elo` index). Some opponents are fully random, so every pair can come up.
+- **Matchmaking** builds most matchups around fighters with the fewest votes (until everyone has 10), against an opponent rated near them (found through the `elo` index). Some opponents are fully random, so every pair can come up.
 - **Live updates** on each vote move fighters with few votes further (K from 64 down toward 16), so they find their level quickly.
 - **Nightly refit** recomputes every rating from all head-to-head totals at once (a Bradley-Terry fit), pulled lightly toward each fighter's starting rating (`start_elo`, from the CSV). Vote order stops mattering, and early votes get re-weighed against everything since.
 
