@@ -103,7 +103,7 @@ export function SwipeCard({ matchup, pos, onDecided, onExited, onDragProgress, r
 
   const tape = [
     ['Total weight', formatWeight(left.weightKg * left.count, units), formatWeight(right.weightKg * right.count, units)],
-    ['Secret weapon', left.secretWeapon, right.secretWeapon],
+    ['Strength', left.secretWeapon, right.secretWeapon],
     ['Weakness', left.weakness, right.weakness],
   ]
 
@@ -123,17 +123,17 @@ export function SwipeCard({ matchup, pos, onDecided, onExited, onDragProgress, r
     >
       <div className="relative min-h-[210px] flex-1 bg-black">
         <div className="corner corner-l stripes">
-          <div className="flex flex-1 items-center justify-center">
+          <div className="relative min-h-0 flex-1">
             <FighterArt fighter={left} />
           </div>
-          <h2 className={`outlined m-0 leading-[1.08] font-black text-balance italic ${nameSize(left.name)}`}>{left.name}</h2>
+          <h2 className={`outlined m-0 shrink-0 leading-[1.08] font-black text-balance italic ${nameSize(left.name)}`}>{left.name}</h2>
           <p className="stamp outlined m-0 first-letter:uppercase">{stampText(left)}</p>
         </div>
         <div className="corner corner-r stripes">
-          <div className="flex flex-1 items-center justify-center">
+          <div className="relative min-h-0 flex-1">
             <FighterArt fighter={right} />
           </div>
-          <h2 className={`outlined m-0 text-right leading-[1.08] font-black text-balance italic ${nameSize(right.name)}`}>
+          <h2 className={`outlined m-0 shrink-0 text-right leading-[1.08] font-black text-balance italic ${nameSize(right.name)}`}>
             {right.name}
           </h2>
           <p className="stamp outlined m-0 first-letter:uppercase">{stampText(right)}</p>

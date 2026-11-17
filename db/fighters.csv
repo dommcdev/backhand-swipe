@@ -1,9 +1,9 @@
 fighter_id,name,short_name,category,quantity,emoji,image_url,weight_kg,height_cm,age,secret_weapon,weakness,elo
-tyson,Prime Mike Tyson,Tyson,people,1,🥊,/fighters/tyson.webp,100,178,22,Peek-a-boo style,Ear-related distractions,1290
-arnold,"Arnold, 1977",Arnold,people,1,💪,/fighters/arnold.webp,107,188,30,Five Mr. Olympia titles,Leg day pump,1240
-shrek,Shrek,Shrek,fictional,1,🧌,/fighters/shrek.webp,200,,,Onion layers,Wants to be left alone,1300
-gorilla-5,5 gorillas,the gorillas,animals,5,🦍,/fighters/gorilla.webp,160,,,Can open hatches,Easily bored,1520
-tank,1 tank,the tank,objects,1,,/fighters/tank.webp,62000,,,120 mm cannon,Tight corners,1720
+tyson,Prime Mike Tyson,Tyson,people,1,🥊,/fighters/tyson.webp,100,178,22,Peek-a-boo style,Ear-related distractions,1000
+arnold,"Arnold, 1977",Arnold,people,1,💪,/fighters/arnold.webp,107,188,30,Five Mr. Olympia titles,Leg day pump,1000
+shrek,Shrek,Shrek,fictional,1,🧌,/fighters/shrek.webp,200,,,Onion layers,Wants to be left alone,1000
+gorilla-5,5 gorillas,the gorillas,animals,5,🦍,/fighters/gorilla.webp,160,,,Can open hatches,Easily bored,1000
+tank,1 tank,the tank,objects,1,,/fighters/tank.webp,62000,,,120 mm cannon,Tight corners,1000
 mj,Michael Jackson,MJ,people,1,🕺,/fighters/mj.webp,60,175,28,Moonwalk,Nose falls off,1000
 michael-jordan,Michael Jordan,Jordan,people,1,🏀,/fighters/michael-jordan.webp,98,198,28,Hang time,Space Jam contract,1000
 ronald-reagan,Ronald Reagan,Reagan,people,1,🎙️,/fighters/ronald-reagan.webp,78,185,69,Hollywood charisma,Falls asleep mid-speech,1000
@@ -165,3 +165,103 @@ jet-50,50 fighter jets,the fighter jets,objects,50,✈️,/fighters/jet.webp,130
 tank-2,2 tanks,the tanks,objects,2,,/fighters/tank.webp,62000,,,Covering fire,Two fuel bills,1000
 tank-5,5 tanks,the tanks,objects,5,,/fighters/tank.webp,62000,,,Armored column,One narrow bridge,1000
 tank-10,10 tanks,the tanks,objects,10,,/fighters/tank.webp,62000,,,Blitzkrieg,Fuel logistics,1000
+nintendo-switch,A Nintendo Switch,the Switch,objects,1,🎮,/fighters/nintendo-switch.webp,0.4,,,Joy-Con drift,Needs a charger,1000
+fork-500,500 forks,the forks,objects,500,🍴,/fighters/fork-500.webp,0.04,,,Two thousand points of attack,One giant magnet,1000
+glass-of-water,A glass of water,the glass of water,objects,1,🥛,/fighters/glass-of-water.webp,0.45,,,Conducts electricity,Getting knocked over,1000
+xbox-controller,An Xbox controller,the Xbox controller,objects,1,🎮,/fighters/xbox-controller.webp,0.29,,,Rumble motors,Two AA batteries,1000
+banana,A banana (for reference),the banana,objects,1,🍌,/fighters/banana.webp,0.12,,,Universal scale,Peel integrity,1000
+nokia-3310,A Nokia 3310,the Nokia,objects,1,📱,/fighters/nokia-3310.webp,0.133,,,Indestructible casing,Snake addiction,1000
+roomba,A Roomba,the Roomba,objects,1,🤖,/fighters/roomba.webp,3.5,,,An unpredictable patrol route,One staircase,1000
+printer,A printer,the printer,objects,1,🖨️,/fighters/printer.webp,7,,,Psychological warfare,Out of cyan,1000
+microwave,A microwave,the microwave,objects,1,📻,/fighters/microwave.webp,12,,,Rotating arena,A metal spoon,1000
+toaster,A toaster,the toaster,objects,1,🍞,/fighters/toaster.webp,1.5,,,Unexpected launch angle,Breadcrumb buildup,1000
+refrigerator,A refrigerator,the refrigerator,objects,1,🧊,/fighters/refrigerator.webp,90,,,Cold shoulder,The door was left open,1000
+washing-machine,A washing machine,the washing machine,objects,1,🫧,/fighters/washing-machine.webp,70,,,Spin cycle,One unbalanced duvet,1000
+traffic-cone,A traffic cone,the traffic cone,objects,1,🚧,/fighters/traffic-cone.webp,3,,,Absolute authority over parking,Anyone with a van,1000
+shopping-cart,A shopping cart,the shopping cart,objects,1,🛒,/fighters/shopping-cart.webp,25,,,Downhill momentum,The one bad wheel,1000
+office-chair,An office chair,the office chair,objects,1,🪑,/fighters/office-chair.webp,15,,,360-degree coverage,Slowly sinking hydraulics,1000
+folding-chair,A folding chair,the folding chair,objects,1,🪑,/fighters/folding-chair.webp,4,,,Wrestling pedigree,Accidentally folds itself,1000
+beanbag,A beanbag chair,the beanbag,objects,1,🛋️,/fighters/beanbag.webp,5,,,Swallows opponents whole,One zipper,1000
+inflatable-tube-man,A wacky inflatable tube man,the tube man,objects,1,🕺,/fighters/inflatable-tube-man.webp,12,,,Impossible to read its stance,Unplugging the fan,1000
+rubber-duck-100,100 rubber ducks,the rubber ducks,objects,100,🦆,/fighters/rubber-duck-100.webp,0.05,,,Unsinkable morale,A bathtub drain,1000
+lego-brick-1000,1000 LEGO bricks,the LEGO bricks,objects,1000,🧱,/fighters/lego-brick-1000.webp,0.0025,,,Barefoot area denial,Slippers,1000
+d20,A twenty-sided die,the die,objects,1,🎲,/fighters/d20.webp,0.005,,,Critical hits,Rolls a one,1000
+magic-eight-ball,A Magic 8 Ball,the Magic 8 Ball,objects,1,🎱,/fighters/magic-eight-ball.webp,0.3,,,Foresees every move,Reply hazy try again,1000
+lava-lamp,A lava lamp,the lava lamp,objects,1,💡,/fighters/lava-lamp.webp,2,,,Hypnotic blobs,Takes four hours to warm up,1000
+disco-ball,A disco ball,the disco ball,objects,1,🪩,/fighters/disco-ball.webp,3,,,Blinding dance-floor presence,No structural support,1000
+garden-gnome-50,50 garden gnomes,the garden gnomes,objects,50,🧙,/fighters/garden-gnome-50.webp,1,,,They were already in your garden,Brittle ankles,1000
+lawn-flamingo-20,20 plastic lawn flamingos,the lawn flamingos,objects,20,🦩,/fighters/lawn-flamingo-20.webp,0.3,,,Coordinated one-legged stance,A strong breeze,1000
+inflatable-dinosaur,An inflatable dinosaur costume,the dinosaur costume,objects,1,🦖,/fighters/inflatable-dinosaur.webp,1.5,,,Jurassic intimidation,Door frames,1000
+pool-noodle-10,10 pool noodles,the pool noodles,objects,10,🏊,/fighters/pool-noodle-10.webp,0.1,,,Foam sword formation,Absolutely no impact damage,1000
+beach-ball,A beach ball,the beach ball,objects,1,🏐,/fighters/beach-ball.webp,0.1,,,Unpredictable bounce,A single thorn,1000
+whoopee-cushion,A whoopee cushion,the whoopee cushion,objects,1,💨,/fighters/whoopee-cushion.webp,0.08,,,Disrupts all serious discussion,Requires someone to sit down,1000
+kazoo-100,100 kazoos,the kazoos,objects,100,🎺,/fighters/kazoo-100.webp,0.02,,,A hundred-part battle anthem,You have to hum,1000
+recorder-30,30 school recorders,the recorders,objects,30,🪈,/fighters/recorder-30.webp,0.1,,,Hot Cross Buns in thirty keys,Music teachers,1000
+air-horn,An air horn,the air horn,objects,1,📣,/fighters/air-horn.webp,0.2,,,Wins the argument instantly,One long honk then nothing,1000
+vuvuzela-10,10 vuvuzelas,the vuvuzelas,objects,10,🎺,/fighters/vuvuzela-10.webp,0.15,,,The entire 2010 World Cup,Running out of breath,1000
+triangle-instrument,A musical triangle,the triangle,objects,1,🔺,/fighters/triangle-instrument.webp,0.2,,,Perfect timing,One note,1000
+accordion,An accordion,the accordion,objects,1,🪗,/fighters/accordion.webp,8,,,Expands to control space,Everyone leaves the room,1000
+piano,A grand piano,the grand piano,objects,1,🎹,/fighters/piano.webp,450,,,Cartoon falling-object physics,Needs a staircase and a delivery team,1000
+bowling-ball,A bowling ball,the bowling ball,objects,1,🎳,/fighters/bowling-ball.webp,7.26,,,Strike potential,The gutter,1000
+ping-pong-ball-10000,10000 ping-pong balls,the ping-pong balls,objects,10000,🏓,/fighters/ping-pong-ball-10000.webp,0.0027,,,Total floor coverage,A room without a floor,1000
+tennis-ball-cannon,A tennis ball machine,the tennis ball machine,objects,1,🎾,/fighters/tennis-ball-cannon.webp,20,,,Relentless baseline pressure,The hopper runs out,1000
+golf-cart,A golf cart,the golf cart,objects,1,⛳,/fighters/golf-cart.webp,450,,,Silent approach across the fairway,A moderate incline,1000
+skateboard,A skateboard,the skateboard,objects,1,🛹,/fighters/skateboard.webp,2.5,,,Unexpected ankle sweep,A tiny pebble,1000
+pogo-stick,A pogo stick,the pogo stick,objects,1,🦘,/fighters/pogo-stick.webp,3,,,Permanent high ground,Ceiling fans,1000
+unicycle,A unicycle,the unicycle,objects,1,🎪,/fighters/unicycle.webp,5,,,Nobody knows what happens next,Balance is the whole job,1000
+hoverboard,A hoverboard,the hoverboard,objects,1,🛹,/fighters/hoverboard.webp,10,,,Spontaneous combustion,Does not actually hover,1000
+shopping-basket-20,20 shopping baskets,the shopping baskets,objects,20,🧺,/fighters/shopping-basket-20.webp,1,,,Stackable defensive formation,A single self-checkout attendant,1000
+suitcase,A rolling suitcase,the suitcase,objects,1,🧳,/fighters/suitcase.webp,4,,,Hard-shell defense,A cobblestone street,1000
+umbrella,An umbrella,the umbrella,objects,1,☂️,/fighters/umbrella.webp,0.4,,,Instant shield deployment,Turns inside out under pressure,1000
+leaf-blower,A leaf blower,the leaf blower,objects,1,🍃,/fighters/leaf-blower.webp,5,,,Suppressive air support,A wet leaf,1000
+vacuum-cleaner,A vacuum cleaner,the vacuum cleaner,objects,1,🧹,/fighters/vacuum-cleaner.webp,6,,,Terrifies every household pet,Its own power cord,1000
+hair-dryer,A hair dryer,the hair dryer,objects,1,💨,/fighters/hair-dryer.webp,0.6,,,Concentrated hot air,A bathroom safety switch,1000
+electric-toothbrush,An electric toothbrush,the toothbrush,objects,1,🪥,/fighters/electric-toothbrush.webp,0.13,,,Forty thousand tiny strikes a minute,The two-minute timer,1000
+plunger,A toilet plunger,the plunger,objects,1,🪠,/fighters/plunger.webp,0.5,,,Suction grapple,Porous surfaces,1000
+toilet-brush,A toilet brush,the toilet brush,objects,1,🚽,/fighters/toilet-brush.webp,0.3,,,Nobody wants to touch it,Being kept at arm's length,1000
+bar-of-soap,A bar of soap,the soap,objects,1,🧼,/fighters/bar-of-soap.webp,0.1,,,Cannot be grappled,Dissolves under pressure,1000
+wet-floor-sign,A wet floor sign,the wet floor sign,objects,1,⚠️,/fighters/wet-floor-sign.webp,0.8,,,Predicts the opponent's next fall,Can only warn you,1000
+mop-bucket,A mop bucket,the mop bucket,objects,1,🪣,/fighters/mop-bucket.webp,2,,,Deployable slippery terrain,A responsible janitor,1000
+roll-of-duct-tape,A roll of duct tape,the duct tape,objects,1,🩹,/fighters/roll-of-duct-tape.webp,0.3,,,Fixes literally everything,Cannot find the end,1000
+bubble-wrap,A sheet of bubble wrap,the bubble wrap,objects,1,🫧,/fighters/bubble-wrap.webp,0.1,,,Weaponized distraction,Extremely satisfying to destroy,1000
+packing-peanut-100000,100000 packing peanuts,the packing peanuts,objects,100000,🥜,/fighters/packing-peanut-100000.webp,0.0001,,,Static cling swarm,A light draft,1000
+rubber-band-5000,5000 rubber bands,the rubber bands,objects,5000,➰,/fighters/rubber-band-5000.webp,0.001,,,Stored elastic vengeance,Old age and sunlight,1000
+paperclip-1000,1000 paperclips,the paperclips,objects,1000,📎,/fighters/paperclip-1000.webp,0.001,,,Can become one very long chain,A magnet with ambition,1000
+stapler,A stapler,the stapler,objects,1,📎,/fighters/stapler.webp,0.3,,,Close-range piercing attacks,Needs a refill,1000
+staple-remover,A staple remover,the staple remover,objects,1,🦷,/fighters/staple-remover.webp,0.05,,,Tiny metal fangs,Made for fighting stationery,1000
+hole-punch,A hole punch,the hole punch,objects,1,🕳️,/fighters/hole-punch.webp,0.5,,,Two perfectly aligned wounds,Maximum twenty sheets,1000
+paper-shredder,A paper shredder,the paper shredder,objects,1,📄,/fighters/paper-shredder.webp,7,,,Cross-cut finishing move,One staple too many,1000
+clipboard,A clipboard,the clipboard,objects,1,📋,/fighters/clipboard.webp,0.25,,,Looks like it is in charge,A missing signature,1000
+sticky-note-10000,10000 sticky notes,the sticky notes,objects,10000,📝,/fighters/sticky-note-10000.webp,0.0005,,,Endless passive-aggressive instructions,Low-tack adhesive,1000
+traffic-light,A traffic light,the traffic light,objects,1,🚦,/fighters/traffic-light.webp,25,,,Makes everyone stop,People who are already late,1000
+parking-meter,A parking meter,the parking meter,objects,1,🅿️,/fighters/parking-meter.webp,20,,,Charges by the minute,Sunday parking,1000
+vending-machine,A vending machine,the vending machine,objects,1,🥤,/fighters/vending-machine.webp,300,,,Overwhelming mass,The snacks are stuck,1000
+atm,An ATM,the ATM,objects,1,🏧,/fighters/atm.webp,400,,,Financial intimidation,Insufficient funds,1000
+photocopier,A photocopier,the photocopier,objects,1,🖨️,/fighters/photocopier.webp,80,,,Can make copies of the battle plan,Paper jam in tray two,1000
+fire-extinguisher,A fire extinguisher,the fire extinguisher,objects,1,🧯,/fighters/fire-extinguisher.webp,6,,,Instant smoke screen,Someone left the pin in,1000
+leaf-rake,A leaf rake,the rake,objects,1,🧹,/fighters/leaf-rake.webp,1,,,Classic cartoon counterattack,Only works when stepped on,1000
+wheelbarrow,A wheelbarrow,the wheelbarrow,objects,1,🛒,/fighters/wheelbarrow.webp,15,,,Mobile dirt delivery,One wheel is a design choice,1000
+snow-globe,A snow globe,the snow globe,objects,1,🔮,/fighters/snow-globe.webp,0.5,,,Localized blizzard,The weather is behind glass,1000
+grandfather-clock,A grandfather clock,the grandfather clock,objects,1,🕰️,/fighters/grandfather-clock.webp,60,,,Knows when your time is up,Needs winding,1000
+cuckoo-clock,A cuckoo clock,the cuckoo clock,objects,1,🐦,/fighters/cuckoo-clock.webp,3,,,Hourly surprise attack,Has to wait another hour,1000
+alarm-clock,An alarm clock,the alarm clock,objects,1,⏰,/fighters/alarm-clock.webp,0.3,,,Destroys the will to live,Snooze button,1000
+bluetooth-speaker,A Bluetooth speaker,the Bluetooth speaker,objects,1,🔊,/fighters/bluetooth-speaker.webp,0.6,,,Maximum-volume entrance music,Connected to the wrong phone,1000
+tv-remote,A TV remote,the remote,objects,1,📺,/fighters/tv-remote.webp,0.15,,,Controls the entire room,Lost between couch cushions,1000
+tangled-earbuds,A pair of tangled earbuds,the earbuds,objects,1,🎧,/fighters/tangled-earbuds.webp,0.02,,,Impossible knot formation,Only the left side works,1000
+hdmi-cable,An HDMI cable,the HDMI cable,objects,1,🔌,/fighters/hdmi-cable.webp,0.1,,,High-definition tripwire,Wrong input selected,1000
+power-bank,A power bank,the power bank,objects,1,🔋,/fighters/power-bank.webp,0.3,,,Keeps the team going,Was never charged,1000
+usb-stick,A USB stick,the USB stick,objects,1,💾,/fighters/usb-stick.webp,0.01,,,Contains the forbidden homework folder,Takes three attempts to plug in,1000
+floppy-disk-100,100 floppy disks,the floppy disks,objects,100,💾,/fighters/floppy-disk-100.webp,0.02,,,One hundred save points,A fridge magnet,1000
+crt-monitor,A CRT monitor,the CRT monitor,objects,1,🖥️,/fighters/crt-monitor.webp,20,,,Surprisingly dense armor,Requires two people to move,1000
+fax-machine,A fax machine,the fax machine,objects,1,📠,/fighters/fax-machine.webp,5,,,Can call for backup from 1997,No one else has a fax machine,1000
+rotary-phone,A rotary telephone,the rotary phone,objects,1,☎️,/fighters/rotary-phone.webp,2,,,A brutally heavy receiver,Emergency numbers take too long,1000
+tub-of-mayonnaise,A tub of mayonnaise,the mayonnaise,objects,1,🫙,/fighters/tub-of-mayonnaise.webp,1,,,Questionable instrument proficiency,Direct sunlight,1000
+jar-of-pickles,A jar of pickles,the pickle jar,objects,1,🥒,/fighters/jar-of-pickles.webp,0.9,,,Brine-based chemical warfare,The lid is too tight,1000
+baguette,A stale baguette,the baguette,objects,1,🥖,/fighters/baguette.webp,0.25,,,French fencing technique,Soup,1000
+frozen-pizza,A frozen pizza,the frozen pizza,objects,1,🍕,/fighters/frozen-pizza.webp,0.45,,,Aerodynamic frozen disc,Needs eighteen minutes at 220 degrees,1000
+wheel-of-cheese,A wheel of cheese,the cheese wheel,objects,1,🧀,/fighters/wheel-of-cheese.webp,38,,,Downhill rolling charge,A cheese grater,1000
+spaghetti-1000,1000 strands of spaghetti,the spaghetti,objects,1000,🍝,/fighters/spaghetti-1000.webp,0.001,,,Overwhelming noodle numbers,Eight minutes in boiling water,1000
+can-of-beans,A can of beans,the beans,objects,1,🥫,/fighters/can-of-beans.webp,0.45,,,Delayed gas attack,A can opener,1000
+ketchup-packet-500,500 ketchup packets,the ketchup packets,objects,500,🍅,/fighters/ketchup-packet-500.webp,0.01,,,Makes every injury look much worse,One heavy footstep,1000
+ice-cube-100,100 ice cubes,the ice cubes,objects,100,🧊,/fighters/ice-cube-100.webp,0.025,,,Slippery swarm tactics,Room temperature,1000
+birthday-cake,A birthday cake,the birthday cake,objects,1,🎂,/fighters/birthday-cake.webp,2,,,Open-flame perimeter defense,Everyone gets a slice,1000
