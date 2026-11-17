@@ -1,11 +1,21 @@
+/// <reference types="vite/client" />
 import { refitRatings, refreshClosestCalls, takeSnapshot } from './api'
 import { handleApi } from './app'
+import { measureD1 } from './metrics'
 
 /** Must match the crons in wrangler.jsonc. */
 const NIGHTLY = '0 0 * * *'
 
 export default {
-  fetch: (request, env, ctx) => handleApi(request, env.DB, ctx),
+  async fetch(request, env, ctx) {
+    if (!import.meta.env.DEV) return handleApi(request, env.DB, ctx)
+    const measured = measureD1(env.DB)
+    const response = await handleApi(request, measured.db, ctx)
+    response.headers.set('X-D1-Rows-Read', String(measured.totals.rowsRead))
+    response.headers.set('X-D1-Rows-Written', String(measured.totals.rowsWritten))
+    response.headers.set('X-D1-Queries', String(measured.totals.queries))
+    return response
+  },
 
   async scheduled(controller, env) {
     if (controller.cron === NIGHTLY) {

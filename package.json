@@ -11,7 +11,8 @@
     "db:migrate": "bun scripts/db.ts migrate",
     "db:import": "bun scripts/db.ts import",
     "db:reset": "bun scripts/db.ts reset",
-    "images": "bun scripts/images.ts"
+    "images": "bun scripts/images.ts",
+    "load-test": "bun scripts/load-test.ts"
   },
   "dependencies": {
     "@fontsource-variable/rubik": "^5.3.0",

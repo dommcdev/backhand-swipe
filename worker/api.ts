@@ -115,14 +115,14 @@ export async function getMatchups(db: D1Database, count: number): Promise<Matchu
     const target = lead.elo + gaussian() * opponentSpread(lead.games)
     return { lead, explore, target }
   })
-  const near = await db.batch<Row>(
-    plans
+  const nearStatements = plans
       .filter((p) => !p.explore)
       .flatMap((p) => [
         db.prepare(`${CANDIDATE_SQL} WHERE elo >= ?1 ORDER BY elo LIMIT ?2`).bind(Math.round(p.target), NEIGHBORS),
         db.prepare(`${CANDIDATE_SQL} WHERE elo < ?1 ORDER BY elo DESC LIMIT ?2`).bind(Math.round(p.target), NEIGHBORS),
-      ]),
-  )
+      ])
+  // Every plan can choose exploration; D1 rejects an empty batch.
+  const near = nearStatements.length ? await db.batch<Row>(nearStatements) : []
 
   const pairs: [string, string][] = []
   const seenPairs = new Set<string>()

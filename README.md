@@ -52,6 +52,30 @@ D1 bills per row read, and the free tier allows 5 million a day. The rule: **eve
 
 Rough cost per request: a vote reads about 5 rows, a batch of matchups about 100, and a rankings page about 150.
 
+### Local load test and row accounting
+
+`bun run dev` adds `X-D1-Rows-Read`, `X-D1-Rows-Written`, and `X-D1-Queries` to API responses,
+using D1's result metadata (including index writes). These headers and the measurement wrapper
+are disabled in production builds. The query counter counts SQL statements, not D1 binding calls.
+
+With the dev server running, `bun run load-test` simulates 100 concurrent users voting without
+pauses for 600 seconds. Each user fetches five real matchups, votes on each with a random winner,
+and repeats. It reports requests, errors, rows, and latency percentiles per endpoint. It refuses
+non-local URLs. **It adds real test votes to your local database**; back up your local D1 first
+if you want to preserve its rankings. It does not touch production.
+
+Optional environment variables: `LOAD_USERS`, `LOAD_SECONDS`, `LOAD_THINK_MS` (pause after each
+vote), `LOAD_URL` (default `http://127.0.0.1:5173`), and `LOAD_OUTPUT` (default
+`/tmp/opencode/backhand-load`). Progress is printed every 30 seconds and saved to `progress.json`;
+the final report is `results.json`. Requests already in flight can finish after the deadline.
+
+This is an API/database test, not a browser or production throughput benchmark: it excludes
+rendering, images, rankings browsing, cron work, and real edge CPU/network/durable-write latency.
+Local D1 does not enforce your account's daily quotas. Compare the reported rows with the
+[current D1 quotas](https://developers.cloudflare.com/d1/platform/pricing/) and requests with
+the [Workers quotas](https://developers.cloudflare.com/workers/platform/limits/), allowing for
+other account usage that day. A local passing run does not prove the free plan will pass.
+
 ### Ratings
 
 `worker/ratings.ts` gets the most out of each vote:
