@@ -1,5 +1,6 @@
 import { parse } from 'csv-parse/sync'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 // Usage:
 //   bun run db:migrate [--remote]                     create any missing tables
@@ -13,17 +14,25 @@ const remote = process.argv.includes('--remote')
 console.log(`Database: ${remote ? 'remote (deployed)' : 'local'}`)
 
 /** Runs SQL with wrangler and returns the rows of each statement. */
-function sql(sql: string): Record<string, unknown>[][] {
-  const proc = Bun.spawnSync(
-    ['bunx', 'wrangler', 'd1', 'execute', 'DB', remote ? '--remote' : '--local', '--json', '--yes', `--command=${sql}`],
-    { stderr: 'inherit' },
-  )
-  const out = proc.stdout.toString()
-  if (!proc.success) {
-    console.error(out)
-    process.exit(1)
+function sql(statement: string): Record<string, unknown>[][] {
+  // A full roster's inserts do not fit in a command-line argument.
+  const dir = mkdtempSync(join('/tmp/opencode', 'd1-'))
+  const file = join(dir, 'query.sql')
+  try {
+    writeFileSync(file, statement)
+    const proc = Bun.spawnSync(
+      ['bunx', 'wrangler', 'd1', 'execute', 'DB', remote ? '--remote' : '--local', '--json', '--yes', `--file=${file}`],
+      { stderr: 'inherit' },
+    )
+    const out = proc.stdout.toString()
+    if (!proc.success) {
+      console.error(out)
+      process.exit(1)
+    }
+    return (JSON.parse(out) as { results: Record<string, unknown>[] }[]).map((r) => r.results)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
   }
-  return (JSON.parse(out) as { results: Record<string, unknown>[] }[]).map((r) => r.results)
 }
 
 /** Writes a value as a SQL literal. The CSV is the only input and is validated first. */
