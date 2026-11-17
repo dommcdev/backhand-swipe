@@ -23,9 +23,9 @@
     }
   ],
   "triggers": {
-    // Every 5 minutes: refit ratings from all votes. Daily: also snapshot ratings for the
-    // "This week" column (worker/index.ts tells them apart). Times are UTC.
-    "crons": ["*/5 * * * *", "0 0 * * *"]
+    // Hourly: refresh closest calls (skipped if nobody voted). Nightly: refit ratings, snapshot
+    // places for the "This week" column. worker/index.ts tells them apart. Times are UTC.
+    "crons": ["30 * * * *", "0 0 * * *"]
   },
   "observability": {
     "enabled": true,

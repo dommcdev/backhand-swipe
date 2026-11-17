@@ -153,8 +153,8 @@ function importCsv(path: string, prune: boolean) {
 
   const statements = fighters.map(
     (values) => `
-      INSERT INTO fighter (${COLUMNS.join(', ')})
-      VALUES (${COLUMNS.map((c) => literal(values[c])).join(', ')})
+      INSERT INTO fighter (${COLUMNS.join(', ')}, start_elo)
+      VALUES (${COLUMNS.map((c) => literal(values[c])).join(', ')}, ${literal(values.elo)})
       ON CONFLICT (fighter_id) DO UPDATE SET
         name          = excluded.name,
         short_name    = excluded.short_name,
@@ -172,14 +172,15 @@ function importCsv(path: string, prune: boolean) {
   if (prune && stale.length) {
     statements.push(`DELETE FROM fighter WHERE fighter_id NOT IN (${ids.map(literal).join(', ')})`)
   }
-  statements.push(
-    // One matchup for every pair of fighters. OR IGNORE skips pairs that already exist.
-    `INSERT OR IGNORE INTO matchup (fighter_a_id, fighter_b_id)
-     SELECT a.fighter_id, b.fighter_id FROM fighter a JOIN fighter b ON a.fighter_id < b.fighter_id`,
-    // Gives new fighters a starting point for the "This week" column.
-    `INSERT OR IGNORE INTO fighter_rating_snapshot (snapshot_date, fighter_id, elo)
-     SELECT date('now'), fighter_id, elo FROM fighter`,
-  )
+  // Gives new fighters a starting point for the "This week" column.
+  // Same as SNAPSHOT_SQL in worker/api.ts.
+  statements.push(`
+    INSERT OR IGNORE INTO fighter_rating_snapshot (snapshot_date, fighter_id, elo, rank, category_rank)
+    SELECT date('now'), fighter_id, elo,
+           row_number() OVER (ORDER BY elo DESC, fighter_id),
+           row_number() OVER (PARTITION BY category ORDER BY elo DESC, fighter_id)
+    FROM fighter
+  `)
   sqlFile(statements.join(';\n'))
 
   const added = ids.filter((id) => !existing.has(id)).length
@@ -187,9 +188,9 @@ function importCsv(path: string, prune: boolean) {
   if (stale.length) {
     console.log(
       prune
-        ? `Deleted ${stale.length} fighters that aren't in the CSV, with their matchups and votes: ${stale.join(', ')}`
+        ? `Deleted ${stale.length} fighters that aren't in the CSV, with their votes: ${stale.join(', ')}`
         : `${stale.length} fighters in the database aren't in the CSV and were left alone: ${stale.join(', ')}\n` +
-            'Run again with --prune to delete them, along with their matchups and votes.',
+            'Run again with --prune to delete them, along with their votes.',
     )
   }
 }
@@ -206,9 +207,12 @@ if (command === 'migrate') {
     console.error('This deletes every fighter and vote in the deployed database. Run again with --yes if you mean it.')
     process.exit(1)
   }
+  // matchup is from the old schema.
   sql(`
+    DROP TABLE IF EXISTS closest_call;
     DROP TABLE IF EXISTS fighter_rating_snapshot;
     DROP TABLE IF EXISTS vote;
+    DROP TABLE IF EXISTS pair;
     DROP TABLE IF EXISTS matchup;
     DROP TABLE IF EXISTS fighter;
   `)
@@ -220,7 +224,7 @@ if (command === 'migrate') {
 
 const [[counts]] = sql(`
   SELECT (SELECT count(*) FROM fighter) AS fighters,
-         (SELECT count(*) FROM matchup) AS matchups,
+         (SELECT count(*) FROM pair) AS pairs,
          (SELECT count(*) FROM vote) AS votes
 `)
-console.log(`Now: ${counts.fighters} fighters, ${counts.matchups} matchups, ${counts.votes} votes`)
+console.log(`Now: ${counts.fighters} fighters, ${counts.pairs} head-to-heads voted on, ${counts.votes} votes`)

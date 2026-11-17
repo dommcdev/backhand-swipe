@@ -1,12 +1,26 @@
-import type { Category, ClosestCall, Fighter, Matchup, RankedFighter, Rankings, VoteRequest } from '../src/api/types'
+import type {
+  Category,
+  ClosestCall,
+  Fighter,
+  Matchup,
+  RankedFighter,
+  Rankings,
+  RankingsRequest,
+  VoteRequest,
+} from '../src/api/types'
 import { winChance } from '../src/lib/elo'
-import { fitRatings, kFactor, pickPairs, type Tally } from './ratings'
+import { EXPLORE, fitRatings, gaussian, kFactor, opponentSpread, uncertainty, weightedPick, type Tally } from './ratings'
+
+// D1 bills per row read. Every request here reads a small, fixed number of rows through an index,
+// however many fighters and votes there are. Anything that has to look at everything runs in the
+// hourly or nightly cron instead (see the bottom of this file).
 
 type Row = Record<string, unknown>
 
 export const categories: Category[] = ['people', 'fictional', 'animals', 'objects']
-/** A head-to-head needs this many votes before it can show up as a closest call. */
+/** A head-to-head needs this many votes before it can show up as a closest call. Matches pair_contested_idx. */
 const CLOSEST_CALL_MIN_VOTES = 5
+const RANKINGS_PAGE = 50
 
 export class BadRequest extends Error {}
 
@@ -25,242 +39,353 @@ const toFighter = (row: Row): Fighter => ({
   weakness: row.weakness as string,
 })
 
-/** Number of votes each fighter has been in, counted from `vote`. */
-const GAMES_SQL = `
-  WITH per_matchup AS (
-    SELECT matchup_id, count(*) AS n FROM vote GROUP BY matchup_id
-  ),
-  per_fighter AS (
-    SELECT m.fighter_a_id AS fighter_id, p.n FROM per_matchup p JOIN matchup m USING (matchup_id)
-    UNION ALL
-    SELECT m.fighter_b_id, p.n FROM per_matchup p JOIN matchup m USING (matchup_id)
-  )
-  SELECT f.fighter_id, f.elo, coalesce(sum(g.n), 0) AS games
-  FROM fighter f
-  LEFT JOIN per_fighter g ON g.fighter_id = f.fighter_id
-  GROUP BY f.fighter_id
-`
+const toRanked = (row: Row, rank: number, lastRank: unknown): RankedFighter => ({
+  ...toFighter(row),
+  elo: row.elo as number,
+  wins: row.wins as number,
+  losses: row.losses as number,
+  rank,
+  rankChange: typeof lastRank === 'number' ? lastRank - rank : 0,
+})
+
+const pairId = (a: string, b: string) => (a < b ? `${a}~${b}` : `${b}~${a}`)
+
+// ---------------------------------------------------------------------------------------------
+// Matchups
+
+type Candidate = { id: string; elo: number; games: number }
+const CANDIDATE_SQL = 'SELECT fighter_id, elo, wins + losses AS games FROM fighter'
+const toCandidate = (r: Row): Candidate => ({ id: r.fighter_id as string, elo: r.elo as number, games: r.games as number })
+
+/** How many fighters with the fewest votes to consider each time. */
+const FRESH_POOL = 40
+/** Share of matchups built around one of the fighters with the fewest votes. */
+const FRESH_SHARE = 0.6
+/** How many fighters on each side of the target rating to choose an opponent from. */
+const NEIGHBORS = 4
+
+/** The highest fighter rowid, for picking random fighters. It only changes on import, so it is kept for a while. */
+let rowidCache: { at: number; max: Promise<number> } | undefined
+function maxRowid(db: D1Database): Promise<number> {
+  if (rowidCache && Date.now() - rowidCache.at < 10 * 60_000) return rowidCache.max
+  const max = db
+    .prepare('SELECT coalesce(max(rowid), 0) AS n FROM fighter')
+    .first<Row>()
+    .then((r) => (r?.n as number) ?? 0)
+  rowidCache = { at: Date.now(), max }
+  max.catch(() => (rowidCache = undefined))
+  return max
+}
+
+/** A random fighter: the first one at or after a random rowid. One row read. */
+const randomFighter = (db: D1Database, max: number) =>
+  db.prepare(`${CANDIDATE_SQL} WHERE rowid >= ?1 ORDER BY rowid LIMIT 1`).bind(1 + Math.floor(Math.random() * max))
 
 export async function getMatchups(db: D1Database, count: number): Promise<Matchup[]> {
   if (!Number.isInteger(count) || count < 1 || count > 20) throw new BadRequest('count must be from 1 to 20')
+  const max = await maxRowid(db)
+  if (max === 0) return []
 
-  const { results: rated } = await db.prepare(GAMES_SQL).run<Row>()
-  const pairs = pickPairs(
-    rated.map((r) => ({ id: r.fighter_id as string, elo: r.elo as number, games: r.games as number })),
-    count,
-  )
+  // 1. Fighters with the fewest votes, plus some random ones.
+  const [freshResult, ...randomResults] = await db.batch<Row>([
+    db.prepare(`${CANDIDATE_SQL} ORDER BY wins + losses LIMIT ?1`).bind(FRESH_POOL),
+    ...Array.from({ length: count * 2 }, () => randomFighter(db, max)),
+  ])
+  const fresh = freshResult.results.map(toCandidate)
+  const random = randomResults.flatMap((r) => r.results.map(toCandidate))
 
-  // One row per fighter: two rows for each picked matchup.
-  const { results: rows } = await db
-    .prepare(
-      `
-      WITH wanted AS (
-        SELECT value ->> '$[0]' AS a, value ->> '$[1]' AS b FROM json_each(?1)
-      ),
-      picked AS MATERIALIZED (
-        SELECT m.matchup_id, m.fighter_a_id, m.fighter_b_id
-        FROM wanted w
-        JOIN matchup m ON m.fighter_a_id = w.a AND m.fighter_b_id = w.b
-      ),
-      tally AS (
-        SELECT p.matchup_id,
-               count(v.vote_id) FILTER (WHERE v.winner_id = p.fighter_a_id) AS a_votes,
-               count(v.vote_id) FILTER (WHERE v.winner_id = p.fighter_b_id) AS b_votes
-        FROM picked p
-        LEFT JOIN vote v ON v.matchup_id = p.matchup_id
-        GROUP BY p.matchup_id
-      )
-      SELECT p.matchup_id, 'a' AS side, t.a_votes AS votes, f.*
-      FROM picked p
-      JOIN tally t ON t.matchup_id = p.matchup_id
-      JOIN fighter f ON f.fighter_id = p.fighter_a_id
-      UNION ALL
-      SELECT p.matchup_id, 'b', t.b_votes, f.*
-      FROM picked p
-      JOIN tally t ON t.matchup_id = p.matchup_id
-      JOIN fighter f ON f.fighter_id = p.fighter_b_id
-    `,
-    )
-    .bind(JSON.stringify(pairs))
-    .run<Row>()
+  // A fighter appears at most once per batch while there are enough to go around.
+  const used = new Set<string>()
+  const unused = (list: Candidate[], not?: Candidate) => list.filter((c) => !used.has(c.id) && c.id !== not?.id)
 
-  const sides = new Map<number, { fighter: Fighter; votes: number }[]>()
-  for (const row of rows) {
-    const id = row.matchup_id as number
-    sides.set(id, [...(sides.get(id) ?? []), { fighter: toFighter(row), votes: row.votes as number }])
+  const leads: Candidate[] = []
+  for (let i = 0; i < count; i++) {
+    const pool = Math.random() < FRESH_SHARE ? unused(fresh) : []
+    const lead =
+      weightedPick(pool, (c) => uncertainty(c.games)) ?? weightedPick(unused(random), () => 1) ?? weightedPick(unused(fresh), () => 1)
+    if (!lead) break
+    used.add(lead.id)
+    leads.push(lead)
   }
 
-  return [...sides].map(([id, pair]) => {
-    const [left, right] = Math.random() < 0.5 ? pair : pair.toReversed()
-    return { id, left: left.fighter, right: right.fighter, leftVotes: left.votes, rightVotes: right.votes }
+  // 2. An opponent for each: usually someone rated near a target close to the lead's rating, so
+  // the result is hard to call. Unsure fighters look further afield.
+  const plans = leads.map((lead) => {
+    const explore = Math.random() < EXPLORE
+    const target = lead.elo + gaussian() * opponentSpread(lead.games)
+    return { lead, explore, target }
+  })
+  const near = await db.batch<Row>(
+    plans
+      .filter((p) => !p.explore)
+      .flatMap((p) => [
+        db.prepare(`${CANDIDATE_SQL} WHERE elo >= ?1 ORDER BY elo LIMIT ?2`).bind(Math.round(p.target), NEIGHBORS),
+        db.prepare(`${CANDIDATE_SQL} WHERE elo < ?1 ORDER BY elo DESC LIMIT ?2`).bind(Math.round(p.target), NEIGHBORS),
+      ]),
+  )
+
+  const pairs: [string, string][] = []
+  const seenPairs = new Set<string>()
+  let nearIndex = 0
+  for (const { lead, explore } of plans) {
+    let options = random
+    if (!explore) {
+      options = [...near[nearIndex].results, ...near[nearIndex + 1].results].map(toCandidate)
+      nearIndex += 2
+    }
+    const opponent =
+      weightedPick(unused(options, lead), (c) => 0.25 + uncertainty(c.games)) ??
+      weightedPick(unused(random, lead), () => 1) ??
+      weightedPick(
+        [...options, ...random, ...fresh].filter((c) => c.id !== lead.id),
+        () => 1,
+      )
+    if (!opponent) continue
+    const id = pairId(lead.id, opponent.id)
+    if (seenPairs.has(id)) continue
+    seenPairs.add(id)
+    used.add(opponent.id)
+    pairs.push(lead.id < opponent.id ? [lead.id, opponent.id] : [opponent.id, lead.id])
+  }
+  if (pairs.length === 0) return []
+
+  // 3. The chosen fighters' details and the head-to-head so far.
+  const ids = [...new Set(pairs.flat())]
+  const [fighterRows, tallyRows] = await db.batch<Row>([
+    db.prepare('SELECT * FROM fighter WHERE fighter_id IN (SELECT value FROM json_each(?1))').bind(JSON.stringify(ids)),
+    db
+      .prepare(
+        `SELECT p.fighter_a_id, p.fighter_b_id, p.a_wins, p.b_wins
+         FROM json_each(?1) j
+         CROSS JOIN pair p ON p.fighter_a_id = j.value ->> '$[0]' AND p.fighter_b_id = j.value ->> '$[1]'`,
+      )
+      .bind(JSON.stringify(pairs)),
+  ])
+  const fighters = new Map(fighterRows.results.map((r) => [r.fighter_id as string, toFighter(r)]))
+  const tallies = new Map(tallyRows.results.map((r) => [pairId(r.fighter_a_id as string, r.fighter_b_id as string), r]))
+
+  return pairs.flatMap(([a, b]) => {
+    const fa = fighters.get(a)
+    const fb = fighters.get(b)
+    if (!fa || !fb) return []
+    const t = tallies.get(pairId(a, b))
+    const aVotes = (t?.a_wins as number) ?? 0
+    const bVotes = (t?.b_wins as number) ?? 0
+    const flip = Math.random() < 0.5
+    return [
+      {
+        id: pairId(a, b),
+        left: flip ? fb : fa,
+        right: flip ? fa : fb,
+        leftVotes: flip ? bVotes : aVotes,
+        rightVotes: flip ? aVotes : bVotes,
+      },
+    ]
   })
 }
+
+// ---------------------------------------------------------------------------------------------
+// Votes
 
 const isVoteRequest = (body: unknown): body is VoteRequest =>
   typeof body === 'object' &&
   body !== null &&
   'matchupId' in body &&
-  Number.isInteger(body.matchupId) &&
+  typeof body.matchupId === 'string' &&
   'winnerId' in body &&
   typeof body.winnerId === 'string'
 
 export async function vote(db: D1Database, body: unknown) {
-  if (!isVoteRequest(body)) throw new BadRequest('Expected { matchupId: number, winnerId: string }')
+  if (!isVoteRequest(body)) throw new BadRequest('Expected { matchupId: string, winnerId: string }')
   const { matchupId, winnerId } = body
-
-  const m = await db
-    .prepare(
-      `
-      SELECT m.fighter_a_id, m.fighter_b_id, a.elo AS a_elo, b.elo AS b_elo,
-             (SELECT count(*) FROM matchup x JOIN vote v USING (matchup_id) WHERE x.fighter_a_id = m.fighter_a_id) +
-             (SELECT count(*) FROM matchup x JOIN vote v USING (matchup_id) WHERE x.fighter_b_id = m.fighter_a_id) AS a_games,
-             (SELECT count(*) FROM matchup x JOIN vote v USING (matchup_id) WHERE x.fighter_a_id = m.fighter_b_id) +
-             (SELECT count(*) FROM matchup x JOIN vote v USING (matchup_id) WHERE x.fighter_b_id = m.fighter_b_id) AS b_games
-      FROM matchup m
-      JOIN fighter a ON a.fighter_id = m.fighter_a_id
-      JOIN fighter b ON b.fighter_id = m.fighter_b_id
-      WHERE m.matchup_id = ?1
-    `,
-    )
-    .bind(matchupId)
-    .first<Row>()
-  if (!m || (winnerId !== m.fighter_a_id && winnerId !== m.fighter_b_id)) {
+  const [a, b, extra] = matchupId.split('~')
+  if (!a || !b || extra !== undefined || a >= b || (winnerId !== a && winnerId !== b)) {
     throw new BadRequest(`${winnerId} is not in matchup ${matchupId}`)
   }
 
-  const aScore = winnerId === m.fighter_a_id ? 1 : 0
-  const surprise = aScore - winChance(m.a_elo as number, m.b_elo as number)
-  // Fighters with few votes move further, so they reach their real rating quickly.
-  const aDelta = Math.round(kFactor(m.a_games as number) * surprise)
-  const bDelta = Math.round(kFactor(m.b_games as number) * surprise)
+  const { results } = await db
+    .prepare(`${CANDIDATE_SQL} WHERE fighter_id IN (?1, ?2)`)
+    .bind(a, b)
+    .run<Row>()
+  const fa = results.map(toCandidate).find((c) => c.id === a)
+  const fb = results.map(toCandidate).find((c) => c.id === b)
+  if (!fa || !fb) throw new BadRequest(`Unknown matchup ${matchupId}`)
 
-  // The ratings were read outside this write so votes never wait on each other. Both updates are
-  // increments, so a vote that lands in between is never lost; at worst this delta is computed
-  // from a rating that is a few milliseconds old. A batch runs as one transaction.
-  // These live updates are instant feedback; refitRatings recomputes everything every few minutes.
-  const addElo = db.prepare('UPDATE fighter SET elo = elo + ?1 WHERE fighter_id = ?2')
+  const aWon = winnerId === a ? 1 : 0
+  const surprise = aWon - winChance(fa.elo, fb.elo)
+  // Fighters with few votes move further, so they reach their real rating quickly.
+  const aDelta = Math.round(kFactor(fa.games) * surprise)
+  const bDelta = Math.round(kFactor(fb.games) * surprise)
+
+  // The ratings were read before this write so votes never wait on each other. Every update is an
+  // increment, so a vote that lands in between is never lost. A batch runs as one transaction.
+  const addResult = db.prepare('UPDATE fighter SET elo = elo + ?1, wins = wins + ?2, losses = losses + ?3 WHERE fighter_id = ?4')
   await db.batch([
-    db.prepare('INSERT INTO vote (matchup_id, winner_id) VALUES (?1, ?2)').bind(matchupId, winnerId),
-    addElo.bind(aDelta, m.fighter_a_id),
-    addElo.bind(-bDelta, m.fighter_b_id),
+    db.prepare('INSERT INTO vote (fighter_a_id, fighter_b_id, winner_id) VALUES (?1, ?2, ?3)').bind(a, b, winnerId),
+    db
+      .prepare(
+        `INSERT INTO pair (fighter_a_id, fighter_b_id, a_wins, b_wins) VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT DO UPDATE SET a_wins = a_wins + excluded.a_wins, b_wins = b_wins + excluded.b_wins`,
+      )
+      .bind(a, b, aWon, 1 - aWon),
+    addResult.bind(aDelta, aWon, 1 - aWon, a),
+    addResult.bind(-bDelta, 1 - aWon, aWon, b),
   ])
 }
 
-export async function getRankings(db: D1Database, category?: Category): Promise<Rankings> {
-  if (category !== undefined && !categories.includes(category)) throw new BadRequest(`Unknown category ${category}`)
-  const only = category ?? null
+// ---------------------------------------------------------------------------------------------
+// Rankings
 
-  const [ranked, closest, total] = await db.batch<Row>([
+/** The snapshot "This week" compares against: the oldest one from the last 7 days. */
+const LAST_WEEK = `(SELECT min(snapshot_date) FROM fighter_rating_snapshot WHERE snapshot_date >= date('now', '-7 days'))`
+
+export async function getRankings(db: D1Database, request: RankingsRequest): Promise<Rankings> {
+  const { category, offset = 0 } = request
+  const search = request.search?.trim() ?? ''
+  if (category !== undefined && !categories.includes(category)) throw new BadRequest(`Unknown category ${category}`)
+  if (!Number.isInteger(offset) || offset < 0) throw new BadRequest('offset must be a whole number')
+  if (search.length > 100) throw new BadRequest('search is too long')
+
+  // Separate statements for "everyone" and one category, so each uses its own index.
+  const scope = category ? 'WHERE f.category = ?1' : 'WHERE ?1 IS NULL'
+  const lastRank = category ? 's.category_rank' : 's.rank'
+  const page = search
+    ? // Search reads every fighter in scope, since a name can match anywhere.
+      db
+        .prepare(
+          `SELECT r.*, ${lastRank} AS last_rank
+           FROM (
+             SELECT f.*, row_number() OVER (ORDER BY f.elo DESC, f.fighter_id) AS place
+             FROM fighter f ${scope}
+           ) r
+           LEFT JOIN fighter_rating_snapshot s ON s.snapshot_date = ${LAST_WEEK} AND s.fighter_id = r.fighter_id
+           WHERE r.name LIKE '%' || ?2 || '%' ESCAPE '\\'
+           ORDER BY r.place
+           LIMIT ?3 OFFSET ?4`,
+        )
+        .bind(category ?? null, search.replace(/[\\%_]/g, '\\$&'), RANKINGS_PAGE + 1, offset)
+    : db
+        .prepare(
+          `SELECT f.*, ?2 + row_number() OVER (ORDER BY f.elo DESC, f.fighter_id) AS place, ${lastRank} AS last_rank
+           FROM (SELECT * FROM fighter f ${scope} ORDER BY f.elo DESC, f.fighter_id LIMIT ?3 OFFSET ?2) f
+           LEFT JOIN fighter_rating_snapshot s ON s.snapshot_date = ${LAST_WEEK} AND s.fighter_id = f.fighter_id
+           ORDER BY place`,
+        )
+        .bind(category ?? null, offset, RANKINGS_PAGE + 1)
+
+  const withCalls = offset === 0 && !search
+  const scopeName = category ?? 'all'
+  const [pageRows, total, calls, callFighters] = await db.batch<Row>([
+    page,
+    // vote_id only goes up, so the newest one is the number of votes. One row read.
+    db.prepare('SELECT coalesce(max(vote_id), 0) AS total FROM vote'),
     db
       .prepare(
-        `
-          WITH scope AS (
-            SELECT * FROM fighter WHERE ?1 IS NULL OR category = ?1
-          ),
-          tally AS (
-            SELECT m.fighter_a_id,
-                   m.fighter_b_id,
-                   count(*) FILTER (WHERE v.winner_id = m.fighter_a_id) AS a_votes,
-                   count(*) FILTER (WHERE v.winner_id = m.fighter_b_id) AS b_votes
-            FROM vote v
-            JOIN matchup m ON m.matchup_id = v.matchup_id
-            GROUP BY m.matchup_id
-          ),
-          record AS (
-            SELECT fighter_id, sum(wins) AS wins, sum(losses) AS losses
-            FROM (
-              SELECT fighter_a_id AS fighter_id, a_votes AS wins, b_votes AS losses FROM tally
-              UNION ALL
-              SELECT fighter_b_id, b_votes, a_votes FROM tally
-            )
-            GROUP BY fighter_id
-          ),
-          last_week AS (
-            SELECT s.fighter_id, row_number() OVER (ORDER BY s.elo DESC, s.fighter_id) AS place
-            FROM fighter_rating_snapshot s
-            JOIN scope ON scope.fighter_id = s.fighter_id
-            WHERE s.snapshot_date = (
-              SELECT min(snapshot_date) FROM fighter_rating_snapshot WHERE snapshot_date >= date('now', '-7 days')
-            )
-          )
-          SELECT f.*,
-                 coalesce(r.wins, 0) AS wins,
-                 coalesce(r.losses, 0) AS losses,
-                 coalesce(lw.place - row_number() OVER (ORDER BY f.elo DESC, f.fighter_id), 0) AS rank_change
-          FROM scope f
-          LEFT JOIN record r ON r.fighter_id = f.fighter_id
-          LEFT JOIN last_week lw ON lw.fighter_id = f.fighter_id
-          ORDER BY f.elo DESC, f.fighter_id
-        `,
+        `SELECT p.fighter_a_id, p.fighter_b_id, p.a_wins, p.b_wins
+         FROM closest_call c
+         JOIN pair p ON p.fighter_a_id = c.fighter_a_id AND p.fighter_b_id = c.fighter_b_id
+         WHERE c.scope = ?1 AND ?2
+         ORDER BY c.place`,
       )
-      .bind(only),
+      .bind(scopeName, withCalls ? 1 : 0),
     db
       .prepare(
-        `
-          SELECT m.fighter_a_id,
-                 m.fighter_b_id,
-                 count(*) FILTER (WHERE v.winner_id = m.fighter_a_id) AS a_votes,
-                 count(*) FILTER (WHERE v.winner_id = m.fighter_b_id) AS b_votes
-          FROM vote v
-          JOIN matchup m ON m.matchup_id = v.matchup_id
-          JOIN fighter a ON a.fighter_id = m.fighter_a_id
-          JOIN fighter b ON b.fighter_id = m.fighter_b_id
-          WHERE ?1 IS NULL OR (a.category = ?1 AND b.category = ?1)
-          GROUP BY m.matchup_id
-          HAVING count(*) >= ?2
-          ORDER BY abs(a_votes - b_votes) * 1.0 / count(*), count(*) DESC
-          LIMIT 3
-        `,
+        `SELECT * FROM fighter WHERE ?2 AND fighter_id IN (
+           SELECT fighter_a_id FROM closest_call WHERE scope = ?1
+           UNION SELECT fighter_b_id FROM closest_call WHERE scope = ?1
+         )`,
       )
-      .bind(only, CLOSEST_CALL_MIN_VOTES),
-    db.prepare('SELECT count(*) AS total FROM vote'),
+      .bind(scopeName, withCalls ? 1 : 0),
   ])
 
-  const fighters: RankedFighter[] = ranked.results.map((row) => ({
-    ...toFighter(row),
-    elo: row.elo as number,
-    wins: row.wins as number,
-    losses: row.losses as number,
-    rankChange: row.rank_change as number,
-  }))
-  const byId = new Map(fighters.map((f) => [f.id, f]))
-  const closestCalls: ClosestCall[] = closest.results.map((row) => ({
-    left: byId.get(row.fighter_a_id as string)!,
-    right: byId.get(row.fighter_b_id as string)!,
-    leftVotes: row.a_votes as number,
-    rightVotes: row.b_votes as number,
-  }))
+  const rows = pageRows.results.slice(0, RANKINGS_PAGE)
+  const byId = new Map(callFighters.results.map((r) => [r.fighter_id as string, toFighter(r)]))
+  const closestCalls: ClosestCall[] = calls.results.flatMap((r) => {
+    const left = byId.get(r.fighter_a_id as string)
+    const right = byId.get(r.fighter_b_id as string)
+    return left && right ? [{ left, right, leftVotes: r.a_wins as number, rightVotes: r.b_wins as number }] : []
+  })
 
-  return { totalVotes: total.results[0].total as number, fighters, closestCalls }
+  return {
+    totalVotes: total.results[0].total as number,
+    fighters: rows.map((r) => toRanked(r, r.place as number, r.last_rank)),
+    closestCalls,
+    nextOffset: pageRows.results.length > RANKINGS_PAGE ? offset + RANKINGS_PAGE : null,
+  }
 }
 
 /**
- * Recomputes every rating from all votes at once (see worker/ratings.ts). Each fighter's starting
- * rating is its earliest snapshot, which the import writes when the fighter is added.
- * A vote that lands between the read and the write loses its live update, but it is in `vote`,
- * so the next refit counts it.
+ * Every fighter, best first. The "where do I rank" page needs the whole ladder. This reads every
+ * fighter, so app.ts caches the response for a few minutes.
  */
-export async function refitRatings(db: D1Database) {
-  const [fighters, tallies] = await db.batch<Row>([
-    db.prepare(`
-      SELECT f.fighter_id, f.elo,
-             coalesce((SELECT s.elo FROM fighter_rating_snapshot s
-                       WHERE s.fighter_id = f.fighter_id ORDER BY s.snapshot_date LIMIT 1), 1000) AS prior
-      FROM fighter f
-    `),
-    db.prepare(`
-      SELECT m.fighter_a_id, m.fighter_b_id,
-             count(*) FILTER (WHERE v.winner_id = m.fighter_a_id) AS a_wins,
-             count(*) FILTER (WHERE v.winner_id = m.fighter_b_id) AS b_wins
-      FROM vote v
-      JOIN matchup m ON m.matchup_id = v.matchup_id
-      GROUP BY m.matchup_id
-    `),
-  ])
+export async function getRoster(db: D1Database): Promise<RankedFighter[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT f.*, s.rank AS last_rank
+       FROM fighter f
+       LEFT JOIN fighter_rating_snapshot s ON s.snapshot_date = ${LAST_WEEK} AND s.fighter_id = f.fighter_id
+       ORDER BY f.elo DESC, f.fighter_id`,
+    )
+    .run<Row>()
+  return results.map((r, i) => toRanked(r, i + 1, r.last_rank))
+}
 
+// ---------------------------------------------------------------------------------------------
+// Scheduled jobs. These are the only places that read everything.
+
+/** True if anyone voted in the last `minutes`. vote_id grows with time, so this reads one row. */
+async function votedSince(db: D1Database, minutes: number) {
+  const latest = await db.prepare('SELECT created_at FROM vote ORDER BY vote_id DESC LIMIT 1').first<Row>()
+  const cutoff = new Date(Date.now() - minutes * 60_000).toISOString().replace('T', ' ').slice(0, 19)
+  return latest !== null && (latest.created_at as string) >= cutoff
+}
+
+/** Picks the three closest head-to-heads overall and per category. Reads only pairs with enough votes. */
+export async function refreshClosestCalls(db: D1Database, ifVotedInMinutes?: number) {
+  if (ifVotedInMinutes !== undefined && !(await votedSince(db, ifVotedInMinutes))) return
+  const { results } = await db
+    .prepare(
+      `SELECT p.fighter_a_id, p.fighter_b_id, p.a_wins, p.b_wins, a.category AS a_category, b.category AS b_category
+       FROM pair p
+       CROSS JOIN fighter a ON a.fighter_id = p.fighter_a_id
+       CROSS JOIN fighter b ON b.fighter_id = p.fighter_b_id
+       WHERE p.a_wins + p.b_wins >= ${CLOSEST_CALL_MIN_VOTES}`,
+    )
+    .run<Row>()
+
+  const contested = results
+    .map((r) => {
+      const n = (r.a_wins as number) + (r.b_wins as number)
+      return { r, n, gap: Math.abs((r.a_wins as number) - (r.b_wins as number)) / n }
+    })
+    .sort((x, y) => x.gap - y.gap || y.n - x.n)
+
+  const insert = db.prepare('INSERT INTO closest_call (scope, place, fighter_a_id, fighter_b_id) VALUES (?1, ?2, ?3, ?4)')
+  const statements = [db.prepare('DELETE FROM closest_call')]
+  for (const scope of ['all', ...categories]) {
+    const top = contested
+      .filter(({ r }) => scope === 'all' || (r.a_category === scope && r.b_category === scope))
+      .slice(0, 3)
+    top.forEach(({ r }, i) => statements.push(insert.bind(scope, i + 1, r.fighter_a_id, r.fighter_b_id)))
+  }
+  await db.batch(statements)
+}
+
+/**
+ * Recomputes every rating from all head-to-head totals at once (see worker/ratings.ts), pulled
+ * lightly toward each fighter's starting rating. Reads every fighter and every pair, so it runs
+ * nightly, and only if anyone voted that day.
+ */
+export async function refitRatings(db: D1Database, ifVotedInMinutes?: number) {
+  if (ifVotedInMinutes !== undefined && !(await votedSince(db, ifVotedInMinutes))) return
+  const [fighters, pairs] = await db.batch<Row>([
+    db.prepare('SELECT fighter_id, elo, start_elo FROM fighter'),
+    db.prepare('SELECT fighter_a_id, fighter_b_id, a_wins, b_wins FROM pair'),
+  ])
   const fit = fitRatings(
-    new Map(fighters.results.map((r) => [r.fighter_id as string, r.prior as number])),
-    tallies.results.map(
+    new Map(fighters.results.map((r) => [r.fighter_id as string, r.start_elo as number])),
+    new Map(fighters.results.map((r) => [r.fighter_id as string, r.elo as number])),
+    pairs.results.map(
       (r): Tally => ({
         a: r.fighter_a_id as string,
         b: r.fighter_b_id as string,
@@ -275,17 +400,21 @@ export async function refitRatings(db: D1Database) {
     .map((r) => ({ id: r.fighter_id as string, elo: Math.round(fit.get(r.fighter_id as string)!), old: r.elo }))
     .filter((u) => u.elo !== u.old)
     .map((u) => setElo.bind(u.elo, u.id))
-  if (updates.length) await db.batch(updates)
+  for (let i = 0; i < updates.length; i += 500) await db.batch(updates.slice(i, i + 500))
 }
 
-/** Records today's ratings. Only the first snapshot each day is kept, so "this week" compares against that. */
+/** Records today's places for "This week". Only the first snapshot each day is kept. scripts/db.ts has a copy. */
+const SNAPSHOT_SQL = `
+  INSERT OR IGNORE INTO fighter_rating_snapshot (snapshot_date, fighter_id, elo, rank, category_rank)
+  SELECT date('now'), fighter_id, elo,
+         row_number() OVER (ORDER BY elo DESC, fighter_id),
+         row_number() OVER (PARTITION BY category ORDER BY elo DESC, fighter_id)
+  FROM fighter
+`
+
 export async function takeSnapshot(db: D1Database) {
-  await db
-    .prepare(
-      `
-    INSERT OR IGNORE INTO fighter_rating_snapshot (snapshot_date, fighter_id, elo)
-    SELECT date('now'), fighter_id, elo FROM fighter
-  `,
-    )
-    .run()
+  await db.batch([
+    db.prepare(SNAPSHOT_SQL),
+    db.prepare(`DELETE FROM fighter_rating_snapshot WHERE snapshot_date < date('now', '-8 days')`),
+  ])
 }

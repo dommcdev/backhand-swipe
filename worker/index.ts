@@ -1,14 +1,20 @@
-import { refitRatings, takeSnapshot } from './api'
+import { refitRatings, refreshClosestCalls, takeSnapshot } from './api'
 import { handleApi } from './app'
 
-/** Must match the daily cron in wrangler.jsonc. */
-const DAILY = '0 0 * * *'
+/** Must match the crons in wrangler.jsonc. */
+const NIGHTLY = '0 0 * * *'
 
 export default {
-  fetch: (request, env) => handleApi(request, env.DB),
+  fetch: (request, env, ctx) => handleApi(request, env.DB, ctx),
 
   async scheduled(controller, env) {
-    await refitRatings(env.DB)
-    if (controller.cron === DAILY) await takeSnapshot(env.DB)
+    if (controller.cron === NIGHTLY) {
+      // Refit first so the snapshot records the refit ratings.
+      await refitRatings(env.DB, 24 * 60)
+      await takeSnapshot(env.DB)
+      await refreshClosestCalls(env.DB)
+    } else {
+      await refreshClosestCalls(env.DB, 60)
+    }
   },
 } satisfies ExportedHandler<Env>

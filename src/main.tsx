@@ -37,8 +37,8 @@ await Promise.race([
   Promise.all([
     fontsReady,
     queryClient.prefetchQuery(matchupQueueQuery),
-    queryClient.prefetchQuery(rankingsQuery()),
-    ...categories.map((c) => queryClient.prefetchQuery(rankingsQuery(c))),
+    queryClient.prefetchInfiniteQuery(rankingsQuery()),
+    ...categories.map((c) => queryClient.prefetchInfiniteQuery(rankingsQuery(c))),
   ]),
   atMost(1500),
 ])

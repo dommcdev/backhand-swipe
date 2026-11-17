@@ -25,6 +25,13 @@ export const api: BackhandApi = {
       .then((res) => res.json())
       .then(preloadArt),
   vote: (body) => request('/votes', { method: 'POST', body: JSON.stringify(body) }).then(() => undefined),
-  getRankings: (category) =>
-    request(category ? `/rankings?category=${category}` : '/rankings').then((res) => res.json()),
+  getRankings: ({ category, search, offset }) => {
+    const params = new URLSearchParams()
+    if (category) params.set('category', category)
+    if (search) params.set('q', search)
+    if (offset) params.set('offset', String(offset))
+    const query = params.toString()
+    return request(query ? `/rankings?${query}` : '/rankings').then((res) => res.json())
+  },
+  getRoster: () => request('/roster').then((res) => res.json()),
 }

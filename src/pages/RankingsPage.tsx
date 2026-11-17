@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-import { useDeferredValue, useEffect, useRef, useState } from 'react'
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { categories, categoryLabels, rankingsQuery } from '../api/queries'
 import type { Category, ClosestCall, RankedFighter } from '../api/types'
@@ -7,16 +7,17 @@ import { FighterFace, FighterGlyph, Medallion } from '../components/FighterArt'
 import { SplitBar } from '../components/SplitBar'
 import { formatNumber, percent } from '../lib/format'
 
-const PAGE_SIZE = 25
-
 const isCategory = (value: string | null): value is Category => categories.some((c) => c === value)
 
-const normalize = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\p{L}\p{N} ]/gu, '')
-    .toLowerCase()
+/** The value once it has stopped changing for `ms`, so search doesn't hit the server on every keystroke. */
+function useDebounced<T>(value: T, ms: number) {
+  const [settled, setSettled] = useState(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms)
+    return () => clearTimeout(timer)
+  }, [value, ms])
+  return settled
+}
 
 interface Row {
   fighter: RankedFighter
@@ -28,9 +29,15 @@ export function RankingsPage() {
   const raw = params.get('category')
   const category = isCategory(raw) ? raw : undefined
   const [search, setSearch] = useState('')
-  const query = normalize(useDeferredValue(search)).trim()
+  const settled = useDebounced(search.trim(), 250)
+  // Clearing the box takes effect right away.
+  const query = search.trim() === '' ? '' : settled
 
-  const { data, error, refetch } = useQuery(rankingsQuery(category))
+  const { data, error, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = useInfiniteQuery({
+    ...rankingsQuery(category, query),
+    // Keep showing the last results while the next search loads.
+    placeholderData: keepPreviousData,
+  })
 
   if (!data) {
     return error ? (
@@ -47,8 +54,10 @@ export function RankingsPage() {
     ) : null
   }
 
-  const rows: Row[] = data.fighters.map((fighter, i) => ({ fighter, rank: i + 1 }))
-  const matches = query ? rows.filter((r) => normalize(r.fighter.name).includes(query)) : rows.slice(3)
+  const first = data.pages[0]
+  const rows: Row[] = data.pages.flatMap((p) => p.fighters.map((fighter) => ({ fighter, rank: fighter.rank })))
+  const matches = query ? rows : rows.slice(3)
+  const loadMore = () => hasNextPage && !isFetchingNextPage && fetchNextPage()
 
   return (
     <>
@@ -76,23 +85,25 @@ export function RankingsPage() {
       {!query && (
         <>
           <Podium top={rows.slice(0, 3)} />
-          {data.closestCalls.length > 0 && <ClosestCalls calls={data.closestCalls} />}
+          {first.closestCalls.length > 0 && <ClosestCalls calls={first.closestCalls} />}
         </>
       )}
 
       <section aria-labelledby="standings" className="flex flex-col gap-3.5">
         <div className="mt-3 flex items-center justify-between gap-4">
           <SectionTitle id="standings">
-            {query ? `${matches.length} ${matches.length === 1 ? 'match' : 'matches'}` : 'Standings'}
+            {query
+              ? `${matches.length}${hasNextPage ? '+' : ''} ${matches.length === 1 && !hasNextPage ? 'match' : 'matches'}`
+              : 'Standings'}
           </SectionTitle>
           <p className="m-0 text-sm font-bold text-muted">
-            {formatNumber(data.totalVotes)} {data.totalVotes === 1 ? 'vote' : 'votes'} cast
+            {formatNumber(first.totalVotes)} {first.totalVotes === 1 ? 'vote' : 'votes'} cast
           </p>
         </div>
 
         {matches.length > 0 ? (
-          <StandingsTable key={`${category}:${query}`} rows={matches} showCategory={!category} />
-        ) : (
+          <StandingsTable rows={matches} showCategory={!category} hasMore={!!hasNextPage} onMore={loadMore} />
+        ) : query !== search.trim() ? null : (
           <div className="flex flex-col items-start gap-3.5 rounded-2xl border-[3px] border-black bg-card p-5 shadow-lift-sm">
             <p className="m-0 text-2xl font-black italic">No fighters match “{search.trim()}”</p>
             <button
@@ -222,20 +233,28 @@ function ClosestCalls({ calls }: { calls: ClosestCall[] }) {
 }
 
 /** Renders a page of rows at a time and adds more as the end scrolls into view. */
-function StandingsTable({ rows, showCategory }: { rows: Row[]; showCategory: boolean }) {
-  const [shown, setShown] = useState(PAGE_SIZE)
-  const sentinel = useRef<HTMLDivElement>(null)
-  const hasMore = shown < rows.length
+interface StandingsTableProps {
+  rows: Row[]
+  showCategory: boolean
+  /** More pages exist on the server. */
+  hasMore: boolean
+  onMore: () => void
+}
 
+function StandingsTable({ rows, showCategory, hasMore, onMore }: StandingsTableProps) {
+  const sentinel = useRef<HTMLDivElement>(null)
+  const more = useRef(onMore)
+  useEffect(() => {
+    more.current = onMore
+  })
+
+  // Re-observing after each page means a sentinel that is still on screen asks for the next one.
   useEffect(() => {
     if (!hasMore) return
-    const observer = new IntersectionObserver(
-      ([entry]) => entry.isIntersecting && setShown((n) => n + PAGE_SIZE),
-      { rootMargin: '800px 0px' },
-    )
+    const observer = new IntersectionObserver(([entry]) => entry.isIntersecting && more.current(), { rootMargin: '800px 0px' })
     observer.observe(sentinel.current!)
     return () => observer.disconnect()
-  }, [hasMore, shown])
+  }, [hasMore, rows.length])
 
   const columns =
     'grid grid-cols-[60px_44px_minmax(0,1fr)_auto] items-center gap-x-3 md:grid-cols-[76px_44px_minmax(0,1fr)_140px_160px_80px_96px] md:gap-x-4'
@@ -251,7 +270,7 @@ function StandingsTable({ rows, showCategory }: { rows: Row[]; showCategory: boo
         <span className="text-right">This week</span>
       </div>
       <ol className="m-0 flex list-none flex-col gap-1.5 p-0">
-        {rows.slice(0, shown).map(({ fighter: f, rank }) => {
+        {rows.map(({ fighter: f, rank }) => {
           const winRate = percent(f.wins, f.wins + f.losses)
           return (
             <li

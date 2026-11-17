@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { categoryLabels, rankingsQuery } from '../api/queries'
+import { categoryLabels, rosterQuery } from '../api/queries'
 import type { RankedFighter } from '../api/types'
 import { FighterFace } from '../components/FighterArt'
 import { winChance } from '../lib/elo'
@@ -88,8 +88,8 @@ export function RankMePage() {
   const shown = (f: FieldName) => (touched[f] ? errors[f] : '')
   const rounded = { weightKg: Math.round(stats.weightKg), heightCm: Math.round(stats.heightCm), age: Math.round(stats.age) }
 
-  const { data } = useQuery(rankingsQuery())
-  const fighters = data?.fighters ?? []
+  const { data } = useQuery(rosterQuery)
+  const fighters = data ?? []
   const people = fighters.filter(hasBodyStats)
   const you = valid && people.length > 0 ? predictRating(people, rounded) : undefined
 

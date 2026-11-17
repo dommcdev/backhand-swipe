@@ -36,18 +36,29 @@ Add `--remote` to any `db:` command to run it on the deployed database instead o
   - `src/api/types.ts` has the types and the REST contract. The Worker imports them too, so both sides stay in sync.
   - `src/index.css` defines the palettes. Each palette sets CSS variables (`--bg`, `--panel`, `--corner-l`, `--corner-r`, and so on) that Tailwind exposes as `bg-panel`, `text-corner-l`, etc. The menu-style pieces (`stripes`, `outlined`, `cut`, `segment`, `press`) live there too. The palette and units are chosen from the settings menu and saved to localStorage.
 - `worker/` is the API. `app.ts` routes `/api` requests and `api.ts` has the queries behind each endpoint.
-- `db/schema.sql` creates the tables: `fighter`, `matchup`, `vote`, and `fighter_rating_snapshot`.
+- `db/schema.sql` creates the tables: `fighter`, `pair`, `vote`, `fighter_rating_snapshot`, and `closest_call`.
 - `scripts/db.ts` creates the tables and imports fighters from a CSV. `scripts/images.ts` makes fighter images.
 - `public/fighters/` holds the fighter images.
 - `wrangler.jsonc` is the Cloudflare configuration. After changing it, run `bun run types` to update `worker-configuration.d.ts`.
 
-Wins, losses, and head-to-head votes are counted from `vote` when needed rather than stored. A fighter's elo is stored so rankings are a cheap read. `worker/ratings.ts` gets the most out of each vote:
+### Keeping database reads small
 
-- **Matchmaking** favors fighters with few votes and pairs them with fighters rated close to them, plus some fully random pairs.
+D1 bills per row read, and the free tier allows 5 million a day. The rule: **every request reads a small, fixed number of rows through an index**, however many fighters and votes there are. `bunx wrangler d1 insights backhand-swipe --sort-by reads` shows which queries read the most.
+
+- **Totals live on the rows they describe.** A fighter has its `wins` and `losses`. `pair` has the head-to-head between two fighters, created the first time they meet, so there's no table of every possible pair. A vote updates the two fighters and their pair in one transaction. Nothing counts `vote` per request.
+- **Rankings load 50 at a time** through the `elo` indexes. Search is the exception: a name can match anywhere, so it reads every fighter in scope.
+- **"Where do I rank?"** needs the whole roster, so `/api/roster` is cached by Cloudflare for 5 minutes.
+- **Cron jobs do anything that needs to look at everything.** Hourly, if anyone voted: pick the closest calls into `closest_call`. Nightly: refit the ratings, then snapshot everyone's place into `fighter_rating_snapshot` for the "This week" column. Snapshots older than about a week are deleted.
+
+Rough cost per request: a vote reads about 5 rows, a batch of matchups about 100, and a rankings page about 150.
+
+### Ratings
+
+`worker/ratings.ts` gets the most out of each vote:
+
+- **Matchmaking** builds most matchups around fighters with the fewest votes, against an opponent rated near them (found through the `elo` index). Some opponents are fully random, so every pair can come up.
 - **Live updates** on each vote move fighters with few votes further (K from 64 down toward 16), so they find their level quickly.
-- **Refit** every 5 minutes, a cron trigger recomputes every elo from all votes at once (a Bradley-Terry fit), pulled lightly toward each fighter's starting elo. Vote order doesn't matter, and early votes are re-weighed against everything since.
-
-Once a day the cron also copies everyone's elo into `fighter_rating_snapshot`, which the "This week" column compares against. A fighter's earliest snapshot is its starting elo for the refit.
+- **Nightly refit** recomputes every rating from all head-to-head totals at once (a Bradley-Terry fit), pulled lightly toward each fighter's starting rating (`start_elo`, from the CSV). Vote order stops mattering, and early votes get re-weighed against everything since.
 
 ## Fighters CSV
 
@@ -71,7 +82,7 @@ fighter_id,name,short_name,category,quantity,emoji,image_url,weight_kg,height_cm
 | `secret_weapon`, `weakness` | yes | Shown on the card |
 | `elo` | no | Starting rating, used only when the fighter is first added. Defaults to 1000. |
 
-`bun run db:import fighters.csv` checks every row first and imports nothing if anything is wrong. Otherwise it adds new fighters, updates existing ones (keeping their elo), and creates a matchup for every pair. Fighters missing from the CSV are kept; add `--prune` to delete them with their votes.
+`bun run db:import fighters.csv` checks every row first and imports nothing if anything is wrong. Otherwise it adds new fighters and updates existing ones (keeping their elo). Fighters missing from the CSV are kept; add `--prune` to delete them with their votes.
 
 ## Images
 

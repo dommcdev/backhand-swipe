@@ -24,12 +24,15 @@ export interface RankedFighter extends Fighter {
   elo: number
   wins: number
   losses: number
+  /** Place in the list it came from: overall, or within its category when filtered. */
+  rank: number
   /** Places moved since last week. Positive means up. */
   rankChange: number
 }
 
 export interface Matchup {
-  id: number
+  /** The two fighter ids, smallest first, joined with "~". */
+  id: string
   left: Fighter
   right: Fighter
   /** Head-to-head votes so far, so the result can be shown the instant someone votes. */
@@ -38,7 +41,7 @@ export interface Matchup {
 }
 
 export interface VoteRequest {
-  matchupId: number
+  matchupId: string
   winnerId: string
 }
 
@@ -49,21 +52,34 @@ export interface ClosestCall {
   rightVotes: number
 }
 
+/** One page of the standings. */
 export interface Rankings {
   totalVotes: number
   fighters: RankedFighter[]
+  /** Only on the first page of an unfiltered list. */
   closestCalls: ClosestCall[]
+  /** Pass as `offset` for the next page, or null when there are no more. */
+  nextOffset: number | null
+}
+
+export interface RankingsRequest {
+  category?: Category
+  /** Fighters whose name contains this. */
+  search?: string
+  offset?: number
 }
 
 /**
  * REST contract, implemented in worker/app.ts:
  *
- *   GET  /api/matchups?count=5           -> Matchup[]
- *   POST /api/votes        VoteRequest   -> 204 No Content
- *   GET  /api/rankings?category=animals  -> Rankings   (omit category for everyone)
+ *   GET  /api/matchups?count=5                            -> Matchup[]
+ *   POST /api/votes        VoteRequest                    -> 204 No Content
+ *   GET  /api/rankings?category=animals&q=bat&offset=50   -> Rankings     (all optional)
+ *   GET  /api/roster                                      -> RankedFighter[]  (everyone, cached for a few minutes)
  */
 export interface BackhandApi {
   getMatchups(count: number): Promise<Matchup[]>
   vote(request: VoteRequest): Promise<void>
-  getRankings(category?: Category): Promise<Rankings>
+  getRankings(request: RankingsRequest): Promise<Rankings>
+  getRoster(): Promise<RankedFighter[]>
 }

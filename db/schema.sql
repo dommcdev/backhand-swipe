@@ -1,5 +1,9 @@
 -- Safe to run on every start: nothing here touches existing rows.
 -- STRICT makes SQLite reject values of the wrong type instead of storing them anyway.
+--
+-- D1 bills per row read, so every request should touch a small, fixed number of rows no matter how
+-- many fighters or votes there are. Totals live on the rows they describe (a fighter's wins, a
+-- pair's head-to-head) and are updated by each vote, instead of being counted from `vote` later.
 
 CREATE TABLE IF NOT EXISTS fighter (
   fighter_id    TEXT PRIMARY KEY,
@@ -14,35 +18,59 @@ CREATE TABLE IF NOT EXISTS fighter (
   age           INTEGER CHECK (age >= 0),
   secret_weapon TEXT NOT NULL,
   weakness      TEXT NOT NULL,
-  elo           INTEGER NOT NULL DEFAULT 1000
+  elo           INTEGER NOT NULL DEFAULT 1000,
+  -- The rating from the CSV. The nightly refit pulls lightly toward it.
+  start_elo     INTEGER NOT NULL DEFAULT 1000,
+  wins          INTEGER NOT NULL DEFAULT 0,
+  losses        INTEGER NOT NULL DEFAULT 0
 ) STRICT;
 
--- Each unordered pair appears once: fighter_a_id is always the smaller id.
-CREATE TABLE IF NOT EXISTS matchup (
-  matchup_id   INTEGER PRIMARY KEY,
+-- Rankings pages, overall and per category, and finding opponents with a similar rating.
+CREATE INDEX IF NOT EXISTS fighter_elo_idx ON fighter (elo DESC, fighter_id);
+CREATE INDEX IF NOT EXISTS fighter_category_elo_idx ON fighter (category, elo DESC, fighter_id);
+-- Matchmaking looks for fighters with the fewest votes.
+CREATE INDEX IF NOT EXISTS fighter_games_idx ON fighter (wins + losses);
+
+-- Head-to-head totals. A row appears the first time two fighters meet, so there is no table of
+-- every possible pair. fighter_a_id is always the smaller id.
+CREATE TABLE IF NOT EXISTS pair (
   fighter_a_id TEXT NOT NULL REFERENCES fighter ON DELETE CASCADE,
   fighter_b_id TEXT NOT NULL REFERENCES fighter ON DELETE CASCADE,
-  UNIQUE (fighter_a_id, fighter_b_id),
+  a_wins       INTEGER NOT NULL DEFAULT 0,
+  b_wins       INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (fighter_a_id, fighter_b_id),
   CHECK (fighter_a_id < fighter_b_id)
-) STRICT;
+) STRICT, WITHOUT ROWID;
 
-CREATE INDEX IF NOT EXISTS matchup_fighter_b_idx ON matchup (fighter_b_id);
+-- Only pairs with enough votes to be a "closest call", so the hourly job reads just those.
+-- Queries must repeat this exact WHERE clause for SQLite to use it.
+CREATE INDEX IF NOT EXISTS pair_contested_idx ON pair (a_wins, b_wins) WHERE a_wins + b_wins >= 5;
 
--- winner_id must be one of the matchup's two fighters. A foreign key can't express that,
--- so the vote transaction in worker/api.ts checks it.
+-- Every vote, for the record and the nightly refit. Nothing reads it per request, so no indexes.
 CREATE TABLE IF NOT EXISTS vote (
-  vote_id    INTEGER PRIMARY KEY,
-  matchup_id INTEGER NOT NULL REFERENCES matchup ON DELETE CASCADE,
-  winner_id  TEXT NOT NULL REFERENCES fighter ON DELETE CASCADE,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  vote_id      INTEGER PRIMARY KEY,
+  fighter_a_id TEXT NOT NULL REFERENCES fighter ON DELETE CASCADE,
+  fighter_b_id TEXT NOT NULL REFERENCES fighter ON DELETE CASCADE,
+  winner_id    TEXT NOT NULL REFERENCES fighter ON DELETE CASCADE,
+  created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) STRICT;
 
-CREATE INDEX IF NOT EXISTS vote_matchup_winner_idx ON vote (matchup_id, winner_id);
-CREATE INDEX IF NOT EXISTS vote_winner_idx ON vote (winner_id);
-
+-- Taken nightly. "This week" compares a fighter's place now with its place a week ago.
+-- Snapshots older than about a week are deleted.
 CREATE TABLE IF NOT EXISTS fighter_rating_snapshot (
   snapshot_date TEXT NOT NULL,
   fighter_id    TEXT NOT NULL REFERENCES fighter ON DELETE CASCADE,
   elo           INTEGER NOT NULL,
+  rank          INTEGER NOT NULL,
+  category_rank INTEGER NOT NULL,
   PRIMARY KEY (snapshot_date, fighter_id)
-) STRICT;
+) STRICT, WITHOUT ROWID;
+
+-- The three closest head-to-heads overall ('all') and per category, refreshed hourly.
+CREATE TABLE IF NOT EXISTS closest_call (
+  scope        TEXT NOT NULL,
+  place        INTEGER NOT NULL,
+  fighter_a_id TEXT NOT NULL REFERENCES fighter ON DELETE CASCADE,
+  fighter_b_id TEXT NOT NULL REFERENCES fighter ON DELETE CASCADE,
+  PRIMARY KEY (scope, place)
+) STRICT, WITHOUT ROWID;
