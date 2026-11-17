@@ -8,7 +8,7 @@ import type {
   VoteRequest,
 } from '../src/api/types'
 import { winChance } from '../src/lib/elo'
-import { EXPLORE, fitRatings, gaussian, kFactor, opponentSpread, uncertainty, weightedPick, type Tally } from './ratings'
+import { closeness, EXPLORE, fitRatings, gaussian, kFactor, opponentSpread, uncertainty, weightedPick, type Tally } from './ratings'
 
 // D1 bills per row read. Every request here reads a small, fixed number of rows through an index,
 // however many fighters and votes there are. Anything that has to look at everything runs in the
@@ -131,9 +131,11 @@ export async function getMatchups(db: D1Database, count: number): Promise<Matchu
       options = [...near[nearIndex].results, ...near[nearIndex + 1].results].map(toCandidate)
       nearIndex += 2
     }
+    // Exploration stays uniform so every pair can come up. Otherwise, the closer the ratings the likelier the pick.
+    const even = (c: Candidate) => (explore ? 1 : closeness(lead.elo, c.elo))
     const opponent =
-      weightedPick(unused(options, lead), (c) => 0.25 + uncertainty(c.games)) ??
-      weightedPick(unused(random, lead), () => 1) ??
+      weightedPick(unused(options, lead), (c) => (0.25 + uncertainty(c.games)) * even(c)) ??
+      weightedPick(unused(random, lead), even) ??
       weightedPick(
         [...options, ...random, ...fresh].filter((c) => c.id !== lead.id),
         () => 1,

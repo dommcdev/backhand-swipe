@@ -20,10 +20,22 @@ export const uncertainty = (games: number) => 1 / (1 + games / SETTLED_GAMES)
 export const kFactor = (games: number) => 16 + 48 * uncertainty(games)
 
 /** Share of matchups against a completely random opponent, so every pair can come up eventually. */
-export const EXPLORE = 0.15
+export const EXPLORE = 0.08
 
-/** How far from a fighter's rating to look for an opponent. 200 points is about a 76% favorite. */
-export const opponentSpread = (games: number) => 200 * (1 + uncertainty(games))
+/**
+ * How far from a fighter's rating to look for an opponent: 120 points (about a 67% favorite) once
+ * settled, twice that for a new fighter whose rating is still a guess.
+ */
+export const opponentSpread = (games: number) => 120 * (1 + uncertainty(games))
+
+/**
+ * How even a fight is, from 1 (a coin flip) toward 0 (a foregone conclusion). Squared so the
+ * preference is strong: 1 at even ratings, about 0.5 at 200 points apart, about 0.1 at 400.
+ */
+export const closeness = (a: number, b: number) => {
+  const p = winChance(a, b)
+  return (4 * p * (1 - p)) ** 2
+}
 
 /** Normally distributed random number. */
 export function gaussian() {
