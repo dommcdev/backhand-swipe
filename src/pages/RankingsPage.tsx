@@ -194,6 +194,13 @@ function PodiumSpot({ row, champion, className = '' }: { row: Row; champion?: bo
       <span className="rounded-full bg-black px-3 py-0.5 text-lg font-black text-white tabular-nums md:px-4 md:py-1 md:text-2xl">
         {formatNumber(fighter.elo)}
       </span>
+      <span className="flex flex-col text-xs leading-tight font-black tabular-nums md:text-base">
+        <span>
+          <span className="sr-only">Record </span>
+          {formatNumber(fighter.wins)}–{formatNumber(fighter.losses)}
+        </span>
+        <span>{percent(fighter.wins, fighter.wins + fighter.losses)}% wins</span>
+      </span>
     </li>
   )
 }
