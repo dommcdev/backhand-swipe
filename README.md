@@ -41,7 +41,13 @@ Add `--remote` to any `db:` command to run it on the deployed database instead o
 - `public/fighters/` holds the fighter images.
 - `wrangler.jsonc` is the Cloudflare configuration. After changing it, run `bun run types` to update `worker-configuration.d.ts`.
 
-Wins, losses, and head-to-head votes are counted from `vote` when needed rather than stored. A fighter's elo is stored, because it depends on the order of every vote before it. Once a day a cron trigger copies everyone's elo into `fighter_rating_snapshot`, which the "This week" column compares against.
+Wins, losses, and head-to-head votes are counted from `vote` when needed rather than stored. A fighter's elo is stored so rankings are a cheap read. `worker/ratings.ts` gets the most out of each vote:
+
+- **Matchmaking** favors fighters with few votes and pairs them with fighters rated close to them, plus some fully random pairs.
+- **Live updates** on each vote move fighters with few votes further (K from 64 down toward 16), so they find their level quickly.
+- **Refit** every 5 minutes, a cron trigger recomputes every elo from all votes at once (a Bradley-Terry fit), pulled lightly toward each fighter's starting elo. Vote order doesn't matter, and early votes are re-weighed against everything since.
+
+Once a day the cron also copies everyone's elo into `fighter_rating_snapshot`, which the "This week" column compares against. A fighter's earliest snapshot is its starting elo for the refit.
 
 ## Fighters CSV
 

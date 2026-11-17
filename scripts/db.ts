@@ -1,5 +1,7 @@
 import { parse } from 'csv-parse/sync'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 // Usage:
 //   bun run db:migrate [--remote]                     create any missing tables
@@ -12,10 +14,10 @@ import { readFileSync } from 'node:fs'
 const remote = process.argv.includes('--remote')
 console.log(`Database: ${remote ? 'remote (deployed)' : 'local'}`)
 
-/** Runs SQL with wrangler and returns the rows of each statement. */
-function sql(sql: string): Record<string, unknown>[][] {
+/** Runs wrangler d1 execute and returns the parsed JSON output. */
+function wrangler(source: string): { results: Record<string, unknown>[] }[] {
   const proc = Bun.spawnSync(
-    ['bunx', 'wrangler', 'd1', 'execute', 'DB', remote ? '--remote' : '--local', '--json', '--yes', `--command=${sql}`],
+    ['bunx', 'wrangler', 'd1', 'execute', 'DB', remote ? '--remote' : '--local', '--json', '--yes', source],
     { stderr: 'inherit' },
   )
   const out = proc.stdout.toString()
@@ -23,7 +25,29 @@ function sql(sql: string): Record<string, unknown>[][] {
     console.error(out)
     process.exit(1)
   }
-  return (JSON.parse(out) as { results: Record<string, unknown>[] }[]).map((r) => r.results)
+  // With --remote --file, wrangler prints upload progress to stdout before the JSON.
+  const start = out.search(/^\s*[[{]/m)
+  return JSON.parse(start === -1 ? out : out.slice(start))
+}
+
+/** Runs SQL and returns the rows of each statement. Use for reads and small statements. */
+function sql(statement: string): Record<string, unknown>[][] {
+  return wrangler(`--command=${statement}`).map((r) => r.results)
+}
+
+/**
+ * Runs a large batch of SQL from a file, since it does not fit in a command-line argument.
+ * Remote D1 only returns a summary for file imports, not rows, so nothing is returned.
+ */
+function sqlFile(statement: string) {
+  const dir = mkdtempSync(join(tmpdir(), 'd1-'))
+  const file = join(dir, 'query.sql')
+  try {
+    writeFileSync(file, statement)
+    wrangler(`--file=${file}`)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 }
 
 /** Writes a value as a SQL literal. The CSV is the only input and is validated first. */
@@ -156,7 +180,7 @@ function importCsv(path: string, prune: boolean) {
     `INSERT OR IGNORE INTO fighter_rating_snapshot (snapshot_date, fighter_id, elo)
      SELECT date('now'), fighter_id, elo FROM fighter`,
   )
-  sql(statements.join(';\n'))
+  sqlFile(statements.join(';\n'))
 
   const added = ids.filter((id) => !existing.has(id)).length
   console.log(`Imported ${fighters.length} fighters: ${added} new, ${fighters.length - added} updated.`)
