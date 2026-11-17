@@ -13,13 +13,13 @@ winnie-the-pooh,Winnie the Pooh,Pooh,animals,1,🍯,/fighters/winnie-the-pooh.we
 bugs-bunny,Bugs Bunny,Bugs,animals,1,🥕,/fighters/bugs-bunny.webp,3,100,,Cartoon physics,A carrot shortage,1000
 daffy-duck,Daffy Duck,Daffy,animals,1,🦆,/fighters/daffy-duck.webp,3,90,,Blast-proof,Every plan ends in dynamite,1000
 porky-pig,Porky Pig,Porky,animals,1,🐷,/fighters/porky-pig.webp,60,100,,Stutter confusion,Ends every fight early,1000
-charlie-brown,Charlie Brown,Charlie Brown,fictional,1,⚾,/fighters/charlie-brown.webp,25,110,,Pure sincerity,Everything (historically),1000
-homer-simpson,Homer Simpson,Homer,fictional,1,🍩,/fighters/homer-simpson.webp,108,183,,Inhuman appetite,D'oh (three seconds late),1000
-eric-cartman,Eric Cartman,Cartman,fictional,1,🧸,/fighters/eric-cartman.webp,45,120,,Authoritah,Being called fat,1000
-bart-simpson,Bart Simpson,Bart,fictional,1,🛹,/fighters/bart-simpson.webp,35,120,,Slingshot,Four weeks of detention,1000
-beavis,Beavis,Beavis,fictional,1,🔥,/fighters/beavis.webp,45,155,,Fire! Fire!,Butt-Head's advice,1000
-butthead,Butt-Head,Butt-Head,fictional,1,🤘,/fighters/butthead.webp,50,158,,Huh-huh chaos,Beavis' ideas,1000
-michael-myers,Michael Myers,Michael Myers,fictional,1,🔪,/fighters/michael-myers.webp,90,190,,Relentless pace,No weaknesses (allegedly),1000
+charlie-brown,Charlie Brown,Charlie Brown,fictional,1,⚾,/fighters/charlie-brown.webp,25,110,8,Pure sincerity,Everything (historically),1000
+homer-simpson,Homer Simpson,Homer,fictional,1,🍩,/fighters/homer-simpson.webp,108,183,36,Inhuman appetite,D'oh (three seconds late),1000
+eric-cartman,Eric Cartman,Cartman,fictional,1,🧸,/fighters/eric-cartman.webp,45,120,10,Authoritah,Being called fat,1000
+bart-simpson,Bart Simpson,Bart,fictional,1,🛹,/fighters/bart-simpson.webp,35,120,10,Slingshot,Four weeks of detention,1000
+beavis,Beavis,Beavis,fictional,1,🔥,/fighters/beavis.webp,45,155,15,Fire! Fire!,Butt-Head's advice,1000
+butthead,Butt-Head,Butt-Head,fictional,1,🤘,/fighters/butthead.webp,50,158,15,Huh-huh chaos,Beavis' ideas,1000
+michael-myers,Michael Myers,Michael Myers,fictional,1,🔪,/fighters/michael-myers.webp,90,190,21,Relentless pace,No weaknesses (allegedly),1000
 jason-voorhees,Jason Voorhees,Jason,fictional,1,🏒,/fighters/jason-voorhees.webp,135,200,,Tree teleport,Water,1000
 freddy-krueger,Freddy Krueger,Freddy,fictional,1,🛏️,/fighters/freddy-krueger.webp,80,180,,Dream attacks,Coffee,1000
 freddy-fazbear,Freddy Fazbear,Freddy,fictional,1,🐻,/fighters/freddy-fazbear.webp,250,200,,Blink stealth,Power running out,1000
@@ -42,7 +42,7 @@ kirby,Kirby,Kirby,animals,1,🎈,/fighters/kirby.webp,5,20,,Copy ability,Full st
 minecraft-steve,Minecraft Steve,Steve,fictional,1,⛏️,/fighters/minecraft-steve.webp,60,180,,Infinite pockets,Fall damage,1000
 markiplier,Markiplier,Markiplier,people,1,🎤,/fighters/markiplier.webp,79,175,36,Horror instincts,Mustache maintenance,1000
 angry-video-game-nerd,The Angry Video Game Nerd,the Nerd,people,1,🍺,/fighters/angry-video-game-nerd.webp,77,173,45,Nerd rage,Unwinnable bosses,1000
-finn-the-human,Finn the Human,Finn,fictional,1,🧢,/fighters/finn-the-human.webp,40,160,,Grass Sword,Righteous plans backfiring,1000
+finn-the-human,Finn the Human,Finn,fictional,1,🧢,/fighters/finn-the-human.webp,40,160,12,Grass Sword,Righteous plans backfiring,1000
 jake-the-dog,Jake the Dog,Jake,animals,1,🐶,/fighters/jake-the-dog.webp,30,100,,Shapeshifting,Naps,1000
 mordecai,Mordecai,Mordecai,animals,1,🐦,/fighters/mordecai.webp,55,180,,Wing slaps,Comes down with Crampers,1000
 rigby,Rigby,Rigby,animals,1,🦝,/fighters/rigby.webp,40,150,,Small target,Trash panda instincts,1000
@@ -62,14 +62,14 @@ wendys,Wendy (from Wendy's),Wendy,fictional,1,🍔,/fighters/wendys.webp,55,163,
 burger-king,The Burger King,the Burger King,fictional,1,👑,/fighters/burger-king.webp,90,185,,Ubiquity,Nobody asked him to,1000
 fortnite-jonesy,Fortnite Jonesy,Jonesy,fictional,1,🪂,/fighters/fortnite-jonesy.webp,80,180,,Instant cover,The storm circle,1000
 eric-andre,Eric Andre,Eric Andre,people,1,🪑,/fighters/eric-andre.webp,75,175,42,Set destruction,Legal bills,1000
-krusty-the-clown,Krusty the Clown,Krusty,fictional,1,🤡,/fighters/krusty-the-clown.webp,75,178,,Sideshow stunts,Chain-smoking chains,1000
-marge-simpson,Marge Simpson,Marge,fictional,1,💙,/fighters/marge-simpson.webp,60,183,,Hair storage,Low-key rage,1000
-lisa-simpson,Lisa Simpson,Lisa,fictional,1,🎷,/fighters/lisa-simpson.webp,30,135,,Saxophone sonics,Being right unheard,1000
-maggie-simpson,Maggie Simpson,Maggie,fictional,1,🤫,/fighters/maggie-simpson.webp,10,70,,Pacifier sonar,Naps at bad times,1000
-peter-griffin,Peter Griffin,Peter,fictional,1,🍺,/fighters/peter-griffin.webp,130,183,,The knee,Bird is the word,1000
-lois-griffin,Lois Griffin,Lois,fictional,1,🍸,/fighters/lois-griffin.webp,55,168,,Surprisingly lethal,Peter,1000
+krusty-the-clown,Krusty the Clown,Krusty,fictional,1,🤡,/fighters/krusty-the-clown.webp,75,178,52,Sideshow stunts,Chain-smoking chains,1000
+marge-simpson,Marge Simpson,Marge,fictional,1,💙,/fighters/marge-simpson.webp,60,183,34,Hair storage,Low-key rage,1000
+lisa-simpson,Lisa Simpson,Lisa,fictional,1,🎷,/fighters/lisa-simpson.webp,30,135,8,Saxophone sonics,Being right unheard,1000
+maggie-simpson,Maggie Simpson,Maggie,fictional,1,🤫,/fighters/maggie-simpson.webp,10,70,1,Pacifier sonar,Naps at bad times,1000
+peter-griffin,Peter Griffin,Peter,fictional,1,🍺,/fighters/peter-griffin.webp,130,183,45,The knee,Bird is the word,1000
+lois-griffin,Lois Griffin,Lois,fictional,1,🍸,/fighters/lois-griffin.webp,55,168,43,Surprisingly lethal,Peter,1000
 brian-griffin,Brian Griffin,Brian,animals,1,🍸,/fighters/brian-griffin.webp,20,100,,Liquid courage,Failed novels,1000
-stewie-griffin,Stewie Griffin,Stewie,fictional,1,🔫,/fighters/stewie-griffin.webp,15,80,,Time travel,One year old,1000
+stewie-griffin,Stewie Griffin,Stewie,fictional,1,🔫,/fighters/stewie-griffin.webp,15,80,1,Time travel,One year old,1000
 master-shake,Master Shake,Shake,fictional,1,🥤,/fighters/master-shake.webp,15,150,,Infinite ego,Has no powers at all,1000
 meatwad,Meatwad,Meatwad,fictional,1,🍖,/fighters/meatwad.webp,30,60,,Ball form,Shake's insults,1000
 frylock,Frylock,Frylock,fictional,1,🍟,/fighters/frylock.webp,25,130,,Eye lasers,Shake's plans,1000
@@ -95,10 +95,10 @@ abraham-lincoln,Abraham Lincoln,Lincoln,people,1,🎩,/fighters/abraham-lincoln.
 shaquille-oneal,Shaquille O'Neal,Shaq,people,1,🏀,/fighters/shaquille-oneal.webp,147,216,53,Breaks backboards,Free throws,1000
 godzilla,Godzilla,Godzilla,animals,1,🦖,/fighters/godzilla.webp,20000000,10000,,Atomic breath,Jet fighters annoy him,1000
 king-kong,King Kong,Kong,animals,1,🦍,/fighters/king-kong.webp,100000,3160,,Climbs anything,Heights (falls off them),1000
-marty-mcfly,Marty McFly,Marty,fictional,1,🛹,/fighters/marty-mcfly.webp,65,170,,88 mph,Being erased from photos,1000
+marty-mcfly,Marty McFly,Marty,fictional,1,🛹,/fighters/marty-mcfly.webp,65,170,17,88 mph,Being erased from photos,1000
 doc-brown,Doc Brown,Doc,fictional,1,🧪,/fighters/doc-brown.webp,75,180,,Flux capacitor,The plutonium supply chain,1000
 muscle-man,Muscle Man,Muscle Man,fictional,1,💪,/fighters/muscle-man.webp,90,150,,My mom!,Is green all over,1000
-shane,Shane,Shane,people,1,🎬,/fighters/shane.webp,80,178,,Mystery,Also mysterious,1000
+shane,Shane,Shane,people,1,🎬,/fighters/shane.webp,80,185,26,Mystery,Also mysterious,1000
 phil-swift,Phil Swift,Phil,people,1,🚤,/fighters/phil-swift.webp,90,175,60,Flex Tape,Product failures on live TV,1000
 rick-astley,Rick Astley,Rick,people,1,🎶,/fighters/rick-astley.webp,80,178,59,Persistence,Gonna let you down,1000
 sarah-connor,Sarah Connor,Connor,fictional,1,🔫,/fighters/sarah-connor.webp,65,168,,Survival training,Asylum paperwork,1000
@@ -125,18 +125,18 @@ easy-e,Eazy-E,Eazy-E,people,1,🧢,/fighters/easy-e.webp,70,165,30,Street cred,R
 lil-tecca,Lil Tecca,Tecca,people,1,🎵,/fighters/lil-tecca.webp,60,173,23,Melodic flow,Getting caught by his own ransom,1000
 mr-beast,Mr. Beast,MrBeast,people,1,💰,/fighters/mr-beast.webp,80,183,27,Money avalanche,Feastables running out,1000
 amelia-earhart,Amelia Earhart,Amelia,people,1,✈️,/fighters/amelia-earhart.webp,55,170,39,Navigation,The Pacific,1000
-rocky-balboa,Rocky Balboa,Rocky,fictional,1,🥊,/fighters/rocky-balboa.webp,105,178,,Endurance,The left eye,1000
+rocky-balboa,Rocky Balboa,Rocky,fictional,1,🥊,/fighters/rocky-balboa.webp,105,178,30,Endurance,The left eye,1000
 t-1000,T-1000,the T-1000,fictional,1,💧,/fighters/t-1000.webp,140,180,,Liquid metal,Molten steel,1000
 t-800,T-800,the T-800,fictional,1,🦾,/fighters/t-800.webp,130,188,,Endoskeleton,Switches on the back of his head,1000
 biggie,The Notorious B.I.G.,Biggie,people,1,👑,/fighters/biggie.webp,110,188,24,Storytelling,Microphone weight class,1000
 iron-man,Iron Man,Iron Man,fictional,1,🔴,/fighters/iron-man.webp,200,198,,The wallet,Palladium core,1000
-spider-man,Spider-Man,Spider-Man,fictional,1,🕷️,/fighters/spider-man.webp,75,178,,Spider-sense,Web fluid running out,1000
-the-hulk,The Hulk,Hulk,fictional,1,🟢,/fighters/the-hulk.webp,520,259,,Gamma strength,Calming music,1000
-thor,Thor,Thor,fictional,1,🔨,/fighters/thor.webp,120,198,,Mjolnir,Doesn't read the fine print,1000
-black-widow,Black Widow,Widow,fictional,1,🖤,/fighters/black-widow.webp,65,170,,Spy training,No superpowers (still shows up),1000
-captain-marvel,Captain Marvel,Marvel,fictional,1,⭐,/fighters/captain-marvel.webp,90,180,,Photon blasts,Kree bureaucracy,1000
+spider-man,Spider-Man,Spider-Man,fictional,1,🕷️,/fighters/spider-man.webp,75,178,15,Spider-sense,Web fluid running out,1000
+the-hulk,The Hulk,Hulk,fictional,1,🟢,/fighters/the-hulk.webp,520,259,38,Gamma strength,Calming music,1000
+thor,Thor,Thor,fictional,1,🔨,/fighters/thor.webp,120,198,1500,Mjolnir,Doesn't read the fine print,1000
+black-widow,Black Widow,Widow,fictional,1,🖤,/fighters/black-widow.webp,65,170,25,Spy training,No superpowers (still shows up),1000
+captain-marvel,Captain Marvel,Marvel,fictional,1,⭐,/fighters/captain-marvel.webp,90,180,29,Photon blasts,Kree bureaucracy,1000
 ant-man,Ant-Man,Ant-Man,fictional,1,🐜,/fighters/ant-man.webp,80,183,,Size shifting,The quantum realm (again),1000
-shazam,Shazam,Shazam,fictional,1,⚡,/fighters/shazam.webp,90,185,,Magic word,Saying the word again,1000
+shazam,Shazam,Shazam,fictional,1,⚡,/fighters/shazam.webp,90,185,14,Magic word,Saying the word again,1000
 thanos,Thanos,Thanos,fictional,1,💍,/fighters/thanos.webp,450,244,,Infinity Gauntlet,One gauntlet five fingers six stones,1000
 gorilla-1,1 gorilla,the gorilla,animals,1,🦍,/fighters/gorilla.webp,160,,,Silverback strength,Easily distracted by his own reflection,1000
 gorilla-2,2 gorillas,the gorillas,animals,2,🦍,/fighters/gorilla.webp,160,,,Chest beats,They fight over who leads,1000

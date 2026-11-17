@@ -90,7 +90,8 @@ export function RankMePage() {
 
   const { data } = useQuery(rosterQuery)
   const fighters = data ?? []
-  const people = fighters.filter(hasBodyStats)
+  // Real people only: fictional characters have ages too, but cartoon kids and superheroes would skew the fit.
+  const people = fighters.filter((f) => f.category === 'people').filter(hasBodyStats)
   const you = valid && people.length > 0 ? predictRating(people, rounded) : undefined
 
   const set = (field: keyof FormValues) => (e: React.ChangeEvent<HTMLInputElement>) =>
