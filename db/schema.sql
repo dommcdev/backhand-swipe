@@ -1,4 +1,4 @@
--- Safe to run on every start: nothing here touches existing rows.
+-- Safe to run on every start: nothing here touches fighters, votes, or head-to-head totals.
 -- STRICT makes SQLite reject values of the wrong type instead of storing them anyway.
 --
 -- D1 bills per row read, so every request should touch a small, fixed number of rows no matter how
@@ -48,9 +48,8 @@ CREATE TABLE IF NOT EXISTS pair (
   CHECK (fighter_a_id < fighter_b_id)
 ) STRICT, WITHOUT ROWID;
 
--- Only pairs with enough votes to be a "closest call", so the hourly job reads just those.
--- Queries must repeat this exact WHERE clause for SQLite to use it.
-CREATE INDEX IF NOT EXISTS pair_contested_idx ON pair (a_wins, b_wins) WHERE a_wins + b_wins >= 5;
+-- Served the removed "closest calls" feature.
+DROP INDEX IF EXISTS pair_contested_idx;
 
 -- Every vote, for the record and the nightly refit. Nothing reads it per request, so no indexes.
 CREATE TABLE IF NOT EXISTS vote (
@@ -72,11 +71,5 @@ CREATE TABLE IF NOT EXISTS fighter_rating_snapshot (
   PRIMARY KEY (snapshot_date, fighter_id)
 ) STRICT, WITHOUT ROWID;
 
--- The three closest head-to-heads overall ('all') and per category, refreshed hourly.
-CREATE TABLE IF NOT EXISTS closest_call (
-  scope        TEXT NOT NULL,
-  place        INTEGER NOT NULL,
-  fighter_a_id TEXT NOT NULL REFERENCES fighter ON DELETE CASCADE,
-  fighter_b_id TEXT NOT NULL REFERENCES fighter ON DELETE CASCADE,
-  PRIMARY KEY (scope, place)
-) STRICT, WITHOUT ROWID;
+-- Held the removed "closest calls" feature, a cache rebuilt from `pair`, so nothing is lost.
+DROP TABLE IF EXISTS closest_call;

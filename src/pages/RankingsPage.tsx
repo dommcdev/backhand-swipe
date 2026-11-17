@@ -2,9 +2,8 @@ import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { categories, categoryLabels, rankingsQuery } from '../api/queries'
-import type { Category, ClosestCall, RankedFighter } from '../api/types'
+import type { Category, RankedFighter } from '../api/types'
 import { FighterFace, FighterGlyph, Medallion } from '../components/FighterArt'
-import { SplitBar } from '../components/SplitBar'
 import { formatNumber, percent } from '../lib/format'
 
 const isCategory = (value: string | null): value is Category => categories.some((c) => c === value)
@@ -82,12 +81,7 @@ export function RankingsPage() {
         </div>
       </div>
 
-      {!query && (
-        <>
-          <Podium top={rows.slice(0, 3)} />
-          {first.closestCalls.length > 0 && <ClosestCalls calls={first.closestCalls} />}
-        </>
-      )}
+      {!query && <Podium top={rows.slice(0, 3)} />}
 
       <section aria-labelledby="standings" className="flex flex-col gap-3.5">
         <div className="mt-3 flex items-center justify-between gap-4">
@@ -201,34 +195,6 @@ function PodiumSpot({ row, champion, className = '' }: { row: Row; champion?: bo
         {formatNumber(fighter.elo)}
       </span>
     </li>
-  )
-}
-
-function ClosestCalls({ calls }: { calls: ClosestCall[] }) {
-  return (
-    <section aria-labelledby="closest-calls" className="flex flex-col items-start gap-3.5 pt-3">
-      <SectionTitle id="closest-calls">Closest calls</SectionTitle>
-      <ul className="m-0 grid w-full list-none gap-3 p-0 md:grid-cols-3 md:gap-5">
-        {calls.map((c) => (
-          <li
-            key={`${c.left.id}~${c.right.id}`}
-            className="flex min-w-0 flex-col gap-2 rounded-2xl border-[3px] border-black bg-card p-3 shadow-lift-sm"
-          >
-            <div className="flex justify-between gap-4 text-[1.05rem] leading-[1.25] font-black italic">
-              <span className="truncate text-corner-l">{c.left.name}</span>
-              <span className="truncate text-right text-corner-r">{c.right.name}</span>
-            </div>
-            <SplitBar
-              className="h-8"
-              leftLabel={c.left.name}
-              rightLabel={c.right.name}
-              leftVotes={c.leftVotes}
-              rightVotes={c.rightVotes}
-            />
-          </li>
-        ))}
-      </ul>
-    </section>
   )
 }
 

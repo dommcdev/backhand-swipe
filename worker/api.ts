@@ -1,6 +1,5 @@
 import type {
   Category,
-  ClosestCall,
   Fighter,
   Matchup,
   RankedFighter,
@@ -13,13 +12,11 @@ import { EXPLORE, fitRatings, gaussian, kFactor, opponentSpread, uncertainty, we
 
 // D1 bills per row read. Every request here reads a small, fixed number of rows through an index,
 // however many fighters and votes there are. Anything that has to look at everything runs in the
-// hourly or nightly cron instead (see the bottom of this file).
+// nightly cron instead (see the bottom of this file).
 
 type Row = Record<string, unknown>
 
 export const categories: Category[] = ['people', 'fictional', 'animals', 'objects']
-/** A head-to-head needs this many votes before it can show up as a closest call. Matches pair_contested_idx. */
-const CLOSEST_CALL_MIN_VOTES = 5
 const RANKINGS_PAGE = 50
 
 export class BadRequest extends Error {}
@@ -278,43 +275,16 @@ export async function getRankings(db: D1Database, request: RankingsRequest): Pro
         )
         .bind(category ?? null, offset, RANKINGS_PAGE + 1)
 
-  const withCalls = offset === 0 && !search
-  const scopeName = category ?? 'all'
-  const [pageRows, total, calls, callFighters] = await db.batch<Row>([
+  const [pageRows, total] = await db.batch<Row>([
     page,
     // vote_id only goes up, so the newest one is the number of votes. One row read.
     db.prepare('SELECT coalesce(max(vote_id), 0) AS total FROM vote'),
-    db
-      .prepare(
-        `SELECT p.fighter_a_id, p.fighter_b_id, p.a_wins, p.b_wins
-         FROM closest_call c
-         JOIN pair p ON p.fighter_a_id = c.fighter_a_id AND p.fighter_b_id = c.fighter_b_id
-         WHERE c.scope = ?1 AND ?2
-         ORDER BY c.place`,
-      )
-      .bind(scopeName, withCalls ? 1 : 0),
-    db
-      .prepare(
-        `SELECT * FROM fighter WHERE ?2 AND fighter_id IN (
-           SELECT fighter_a_id FROM closest_call WHERE scope = ?1
-           UNION SELECT fighter_b_id FROM closest_call WHERE scope = ?1
-         )`,
-      )
-      .bind(scopeName, withCalls ? 1 : 0),
   ])
 
   const rows = pageRows.results.slice(0, RANKINGS_PAGE)
-  const byId = new Map(callFighters.results.map((r) => [r.fighter_id as string, toFighter(r)]))
-  const closestCalls: ClosestCall[] = calls.results.flatMap((r) => {
-    const left = byId.get(r.fighter_a_id as string)
-    const right = byId.get(r.fighter_b_id as string)
-    return left && right ? [{ left, right, leftVotes: r.a_wins as number, rightVotes: r.b_wins as number }] : []
-  })
-
   return {
     totalVotes: total.results[0].total as number,
     fighters: rows.map((r, i) => toRanked(r, (r.place as number | undefined) ?? offset + i + 1, r.last_rank)),
-    closestCalls,
     nextOffset: pageRows.results.length > RANKINGS_PAGE ? offset + RANKINGS_PAGE : null,
   }
 }
@@ -343,44 +313,6 @@ async function votedSince(db: D1Database, minutes: number) {
   const latest = await db.prepare('SELECT created_at FROM vote ORDER BY vote_id DESC LIMIT 1').first<Row>()
   const cutoff = new Date(Date.now() - minutes * 60_000).toISOString().replace('T', ' ').slice(0, 19)
   return latest !== null && (latest.created_at as string) >= cutoff
-}
-
-/** Picks the three closest head-to-heads overall and per category. Reads only pairs with enough votes. */
-export async function refreshClosestCalls(db: D1Database, ifVotedInMinutes?: number) {
-  if (ifVotedInMinutes !== undefined && !(await votedSince(db, ifVotedInMinutes))) return
-  const { results } = await db
-    .prepare(
-      `SELECT p.fighter_a_id, p.fighter_b_id, p.a_wins, p.b_wins, a.category AS a_category, b.category AS b_category
-       FROM pair p
-       CROSS JOIN fighter a ON a.fighter_id = p.fighter_a_id
-       CROSS JOIN fighter b ON b.fighter_id = p.fighter_b_id
-       WHERE p.a_wins + p.b_wins >= ${CLOSEST_CALL_MIN_VOTES}`,
-    )
-    .run<Row>()
-
-  const contested = results
-    .map((r) => {
-      const n = (r.a_wins as number) + (r.b_wins as number)
-      return { r, n, gap: Math.abs((r.a_wins as number) - (r.b_wins as number)) / n }
-    })
-    .sort((x, y) => x.gap - y.gap || y.n - x.n)
-
-  const picks: [string, number, string, string][] = []
-  for (const scope of ['all', ...categories]) {
-    const top = contested
-      .filter(({ r }) => scope === 'all' || (r.a_category === scope && r.b_category === scope))
-      .slice(0, 3)
-    top.forEach(({ r }, i) => picks.push([scope, i + 1, r.fighter_a_id as string, r.fighter_b_id as string]))
-  }
-
-  // Rewriting costs a row write per pick, so skip it when nothing changed.
-  const current = await db.prepare('SELECT scope, place, fighter_a_id, fighter_b_id FROM closest_call').run<Row>()
-  const key = (p: unknown[]) => p.join('|')
-  const before = new Set(current.results.map((r) => key([r.scope, r.place, r.fighter_a_id, r.fighter_b_id])))
-  if (before.size === picks.length && picks.every((p) => before.has(key(p)))) return
-
-  const insert = db.prepare('INSERT INTO closest_call (scope, place, fighter_a_id, fighter_b_id) VALUES (?1, ?2, ?3, ?4)')
-  await db.batch([db.prepare('DELETE FROM closest_call'), ...picks.map((p) => insert.bind(...p))])
 }
 
 /**

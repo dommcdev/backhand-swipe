@@ -1,10 +1,7 @@
 /// <reference types="vite/client" />
-import { refitRatings, refreshClosestCalls, takeSnapshot } from './api'
+import { refitRatings, takeSnapshot } from './api'
 import { handleApi } from './app'
 import { measureD1 } from './metrics'
-
-/** Must match the crons in wrangler.jsonc. */
-const NIGHTLY = '0 0 * * *'
 
 export default {
   async fetch(request, env, ctx) {
@@ -19,14 +16,9 @@ export default {
     return response
   },
 
-  async scheduled(controller, env) {
-    if (controller.cron === NIGHTLY) {
-      // Refit first so the snapshot records the refit ratings.
-      await refitRatings(env.DB, 24 * 60)
-      await takeSnapshot(env.DB)
-      await refreshClosestCalls(env.DB)
-    } else {
-      await refreshClosestCalls(env.DB, 60)
-    }
+  async scheduled(_controller, env) {
+    // Refit first so the snapshot records the refit ratings.
+    await refitRatings(env.DB, 24 * 60)
+    await takeSnapshot(env.DB)
   },
 } satisfies ExportedHandler<Env>

@@ -36,7 +36,7 @@ Add `--remote` to any `db:` command to run it on the deployed database instead o
   - `src/api/types.ts` has the types and the REST contract. The Worker imports them too, so both sides stay in sync.
   - `src/index.css` defines the palettes. Each palette sets CSS variables (`--bg`, `--panel`, `--corner-l`, `--corner-r`, and so on) that Tailwind exposes as `bg-panel`, `text-corner-l`, etc. The menu-style pieces (`stripes`, `outlined`, `cut`, `segment`, `press`) live there too. The palette and units are chosen from the settings menu and saved to localStorage.
 - `worker/` is the API. `app.ts` routes `/api` requests and `api.ts` has the queries behind each endpoint.
-- `db/schema.sql` creates the tables: `fighter`, `pair`, `vote`, `fighter_rating_snapshot`, and `closest_call`.
+- `db/schema.sql` creates the tables: `fighter`, `pair`, `vote`, and `fighter_rating_snapshot`.
 - `scripts/db.ts` creates the tables and imports fighters from a CSV. `scripts/images.ts` makes fighter images.
 - `public/fighters/` holds the fighter images.
 - `wrangler.jsonc` is the Cloudflare configuration. After changing it, run `bun run types` to update `worker-configuration.d.ts`.
@@ -50,7 +50,7 @@ D1 bills per row read, and the free tier allows 5 million a day. The rule: **eve
 - **Rankings load 50 at a time** through the `elo` index. Search is the exception: a name can match anywhere, so it reads every fighter in scope.
 - **Cloudflare caches** rankings (except searches) for 30 seconds and `/api/roster` for 5 minutes, so most visitors read nothing. The app only prefetches the overall rankings; category tabs load when opened.
 - **"Where do I rank?"** needs the whole roster, hence the longer cache.
-- **Cron jobs do anything that needs to look at everything.** Hourly, if anyone voted: pick the closest calls into `closest_call` (rewritten only if they changed). Nightly: refit the ratings, then snapshot everyone's place into `fighter_rating_snapshot` for the "This week" column. Snapshots older than about a week are deleted.
+- **Cron jobs do anything that needs to look at everything.** Nightly: refit the ratings (skipped if nobody voted that day), then snapshot everyone's place into `fighter_rating_snapshot` for the "This week" column. Snapshots older than about a week are deleted.
 
 Rough cost per request: a vote reads 6 rows and writes 6 (8 while a fighter has under 10 votes), a batch of matchups reads about 100, and an uncached rankings page about 100–300.
 

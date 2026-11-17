@@ -73,7 +73,7 @@ by an inline script before first paint.
 - Split bar: rounded black-bordered bar, red share and blue share with white percentages,
   animating its split.
 - Rankings: sticky search and category bar, a three-card podium (the champion's card has a mini
-  championship belt), closest-call split bars, then a white standings table with rank, face,
+  championship belt), then a white standings table with rank, face,
   name, record, win-rate bar, rating, and weekly movement.
 - Where do I rank: white form card (units toggle, weight, age, height), a big verdict headline,
   and a ladder where the "You" row is inverted to black and springs in.

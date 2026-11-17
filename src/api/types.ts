@@ -45,19 +45,10 @@ export interface VoteRequest {
   winnerId: string
 }
 
-export interface ClosestCall {
-  left: Fighter
-  right: Fighter
-  leftVotes: number
-  rightVotes: number
-}
-
 /** One page of the standings. */
 export interface Rankings {
   totalVotes: number
   fighters: RankedFighter[]
-  /** Only on the first page of an unfiltered list. */
-  closestCalls: ClosestCall[]
   /** Pass as `offset` for the next page, or null when there are no more. */
   nextOffset: number | null
 }

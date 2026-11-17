@@ -207,7 +207,7 @@ if (command === 'migrate') {
     console.error('This deletes every fighter and vote in the deployed database. Run again with --yes if you mean it.')
     process.exit(1)
   }
-  // matchup is from the old schema.
+  // matchup and closest_call are from older schemas.
   sql(`
     DROP TABLE IF EXISTS closest_call;
     DROP TABLE IF EXISTS fighter_rating_snapshot;
