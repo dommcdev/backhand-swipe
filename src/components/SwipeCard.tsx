@@ -1,6 +1,6 @@
 import { useImperativeHandle, useRef, type Ref } from 'react'
 import type { Fighter, Matchup } from '../api/types'
-import { formatWeight } from '../lib/format'
+import { formatHeight, formatWeight } from '../lib/format'
 import { useUnits } from '../lib/units'
 import { FighterArt } from './FighterArt'
 
@@ -101,10 +101,14 @@ export function SwipeCard({ matchup, pos, onDecided, onExited, onDragProgress, r
     }
   }
 
+  // Most objects and animals have no age or height.
+  const age = (f: Fighter) => (f.age === undefined ? '—' : `${f.age} yrs`)
+  const height = (f: Fighter) => (f.heightCm === undefined ? '—' : formatHeight(f.heightCm, units))
+  const weight = (f: Fighter) => formatWeight(f.weightKg * f.count, units)
   const tape = [
-    ['Total weight', formatWeight(left.weightKg * left.count, units), formatWeight(right.weightKg * right.count, units)],
-    ['Strength', left.secretWeapon, right.secretWeapon],
-    ['Weakness', left.weakness, right.weakness],
+    ['Age', age(left), age(right)],
+    ['Weight', weight(left), weight(right)],
+    ['Height', height(left), height(right)],
   ]
 
   return (

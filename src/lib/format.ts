@@ -18,6 +18,18 @@ export function formatWeight(kg: number, units: Units) {
   return `${Math.max(1, Math.round(kg * 1_000_000))} mg`
 }
 
+/** 5′10″ or 178 cm; giants like Godzilla in whole feet or metres. */
+export function formatHeight(cm: number, units: Units) {
+  if (units === 'imperial') {
+    const totalIn = Math.round(cm / CM_PER_IN)
+    if (totalIn < 12) return `${totalIn} in`
+    if (totalIn >= 120) return `${formatNumber(Math.round(totalIn / 12))} ft`
+    return `${Math.floor(totalIn / 12)}′${totalIn % 12}″`
+  }
+  if (cm < 1000) return `${Math.round(cm)} cm`
+  return `${formatNumber(Math.round(cm / 100))} m`
+}
+
 export function ordinal(n: number) {
   const suffixes = ['th', 'st', 'nd', 'rd']
   const v = n % 100
