@@ -1,5 +1,5 @@
 import type { Category } from '../src/api/types'
-import { BadRequest, getMatchups, getRankings, getRoster, vote } from './api'
+import { BadRequest, createFighter, editFighter, getMatchups, getRankings, getRoster, listFighters, removeFighter, vote } from './api'
 
 const noStore = { 'Cache-Control': 'no-store' }
 /** The roster reads every fighter, so each Cloudflare location reuses it for this long. */
@@ -43,6 +43,21 @@ async function route(request: Request, db: D1Database, ctx: ExecutionContext): P
   }
   if (url.pathname === '/api/roster' && method === 'GET') {
     return cached(url.origin + url.pathname, ROSTER_MAX_AGE, ctx, () => getRoster(db))
+  }
+  if (url.pathname === '/api/fighters' && method === 'GET') {
+    return Response.json(await listFighters(db), { headers: noStore })
+  }
+  if (url.pathname === '/api/fighters' && method === 'POST') {
+    return Response.json(await createFighter(db, await request.json().catch(() => null)), { status: 201 })
+  }
+  const fighterId = url.pathname.match(/^\/api\/fighters\/([^/]+)$/)?.[1]
+  if (fighterId && method === 'PUT') {
+    await editFighter(db, decodeURIComponent(fighterId), await request.json().catch(() => null))
+    return new Response(null, { status: 204 })
+  }
+  if (fighterId && method === 'DELETE') {
+    await removeFighter(db, decodeURIComponent(fighterId))
+    return new Response(null, { status: 204 })
   }
   return Response.json({ error: 'Not found' }, { status: 404 })
 }

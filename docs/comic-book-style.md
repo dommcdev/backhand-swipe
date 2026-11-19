@@ -67,7 +67,7 @@ by an inline script before first paint.
   on the left and blue on the right, cut on a diagonal, with emoji crowds or art. A round
   paper-colored "vs" badge, tilted -8°, sits on the seam. Dragging dims the losing corner and
   fades in a white outlined "X wins" stamp on the winner. The lower half has both names in
-  their corner colors and a "tale of the tape" (total weight, strength, weakness).
+  their corner colors and a "tale of the tape" (age, weight, height).
 - Deck: two cards peek out behind the top one and rise as it is dragged.
 - Pick buttons: solid red and blue blocks with a chevron and the fighter's name in white.
 - Split bar: rounded black-bordered bar, red share and blue share with white percentages,

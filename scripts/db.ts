@@ -1,5 +1,5 @@
 import { parse } from 'csv-parse/sync'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -68,15 +68,13 @@ const COLUMNS = [
   'weight_kg',
   'height_cm',
   'age',
-  'secret_weapon',
-  'weakness',
   'elo',
 ] as const
 type Column = (typeof COLUMNS)[number]
 type Value = string | number | null
 
 const CATEGORIES = ['people', 'fictional', 'animals', 'objects']
-const REQUIRED: Column[] = ['fighter_id', 'name', 'short_name', 'category', 'weight_kg', 'secret_weapon', 'weakness']
+const REQUIRED: Column[] = ['fighter_id', 'name', 'short_name', 'category', 'weight_kg']
 const INTEGERS: Column[] = ['quantity', 'height_cm', 'age', 'elo']
 const DEFAULTS: Partial<Record<Column, number>> = { quantity: 1, elo: 1000 }
 
@@ -164,16 +162,13 @@ function importCsv(path: string, prune: boolean) {
         image_url     = excluded.image_url,
         weight_kg     = excluded.weight_kg,
         height_cm     = excluded.height_cm,
-        age           = excluded.age,
-        secret_weapon = excluded.secret_weapon,
-        weakness      = excluded.weakness
+        age           = excluded.age
     `,
   )
   if (prune && stale.length) {
-    statements.push(`DELETE FROM fighter WHERE fighter_id NOT IN (${ids.map(literal).join(', ')})`)
+    statements.push(`DELETE FROM fighter WHERE fighter_id IN (${stale.map(literal).join(', ')})`)
   }
-  // Gives new fighters a starting point for the "This week" column.
-  // Same as SNAPSHOT_SQL in worker/api.ts.
+  // Gives new fighters a starting point for the "This week" column. Same as SNAPSHOT_SQL in worker/db.ts.
   statements.push(`
     INSERT OR IGNORE INTO fighter_rating_snapshot (snapshot_date, fighter_id, elo, rank, category_rank)
     SELECT date('now'), fighter_id, elo,
@@ -207,19 +202,28 @@ if (command === 'migrate') {
     console.error('This deletes every fighter and vote in the deployed database. Run again with --yes if you mean it.')
     process.exit(1)
   }
-  // matchup and closest_call are from older schemas.
   sql(`
     DROP TABLE IF EXISTS closest_call;
     DROP TABLE IF EXISTS fighter_rating_snapshot;
     DROP TABLE IF EXISTS vote;
     DROP TABLE IF EXISTS pair;
-    DROP TABLE IF EXISTS matchup;
     DROP TABLE IF EXISTS fighter;
   `)
   migrate()
 } else {
   console.error('Usage: bun scripts/db.ts <migrate | import <file.csv> [--prune] | reset [--yes]> [--remote]')
   process.exit(1)
+}
+
+// Wrangler keeps the local database under a hashed name in .wrangler/. Link it to db/local.sqlite
+// so it is easy to find and open (bun run db:studio).
+const dir = '.wrangler/state/v3/d1/miniflare-D1DatabaseObject'
+if (!remote && existsSync(dir)) {
+  const file = readdirSync(dir).find((f) => f.endsWith('.sqlite') && f !== 'metadata.sqlite')
+  if (file) {
+    rmSync('db/local.sqlite', { force: true })
+    symlinkSync(`../${dir}/${file}`, 'db/local.sqlite')
+  }
 }
 
 const [[counts]] = sql(`

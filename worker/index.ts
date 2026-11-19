@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
-import { refitRatings, takeSnapshot } from './api'
+import { refitRatings } from './api'
 import { handleApi } from './app'
+import { takeSnapshot } from './db'
 import { measureD1 } from './metrics'
 
 export default {

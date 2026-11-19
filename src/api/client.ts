@@ -6,7 +6,8 @@ async function request(path: string, init?: RequestInit) {
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   })
   if (!res.ok) {
-    throw new Error(`${init?.method ?? 'GET'} /api${path} returned ${res.status}`)
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.error ?? `${init?.method ?? 'GET'} /api${path} returned ${res.status}`)
   }
   return res
 }
@@ -34,4 +35,9 @@ export const api: BackhandApi = {
     return request(query ? `/rankings?${query}` : '/rankings').then((res) => res.json())
   },
   getRoster: () => request('/roster').then((res) => res.json()),
+  getFighters: () => request('/fighters').then((res) => res.json()),
+  addFighter: (input) => request('/fighters', { method: 'POST', body: JSON.stringify(input) }).then((res) => res.json()),
+  updateFighter: (id, input) =>
+    request(`/fighters/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }).then(() => undefined),
+  deleteFighter: (id) => request(`/fighters/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(() => undefined),
 }

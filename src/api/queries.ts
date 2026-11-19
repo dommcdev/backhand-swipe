@@ -32,3 +32,9 @@ export const matchupQueueQuery = {
   queryKey: ['matchups', 'queue'],
   queryFn: () => api.getMatchups(5),
 }
+
+/** Every fighter, for the characters page. Not cached, so changes show up right away. */
+export const fightersQuery = {
+  queryKey: ['fighters'],
+  queryFn: () => api.getFighters(),
+}

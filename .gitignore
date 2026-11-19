@@ -47,3 +47,6 @@ dist-ssr
 
 # Fighter images are uploaded by `bun run deploy` from your machine but not tracked.
 public/fighters/*
+
+# Link to the local D1 database, made by the db: scripts.
+db/local.sqlite

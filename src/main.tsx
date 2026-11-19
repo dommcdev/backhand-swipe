@@ -7,6 +7,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router'
 import { matchupQueueQuery, rankingsQuery } from './api/queries.ts'
 import App from './App.tsx'
 import './index.css'
+import { CharactersPage } from './pages/CharactersPage.tsx'
 import { RankingsPage } from './pages/RankingsPage.tsx'
 import { RankMePage } from './pages/RankMePage.tsx'
 import { VotePage } from './pages/VotePage.tsx'
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
       { index: true, element: <VotePage /> },
       { path: 'rankings', element: <RankingsPage /> },
       { path: 'where-do-i-rank', element: <RankMePage /> },
+      { path: 'characters', element: <CharactersPage /> },
     ],
   },
 ])

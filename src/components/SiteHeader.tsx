@@ -13,7 +13,7 @@ export function SiteHeader() {
           </span>
         </Link>
         <div className="flex items-center gap-3">
-          <NavTabs className="hidden md:flex" />
+          <NavTabs className="hidden lg:flex" />
           <SettingsMenu />
         </div>
       </div>

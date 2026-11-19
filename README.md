@@ -25,17 +25,18 @@ Add `--remote` to any `db:` command to run it on the deployed database instead o
 | Add or update fighters | `bun run db:import fighters.csv` (see [the CSV format](#fighters-csv)) |
 | Add a fighter image | `bun run images photo.png cat`, then set `image_url` to `/fighters/cat.webp` in the CSV |
 | Start the database over | `bun run db:reset` (with `--remote`, also needs `--yes`) |
+| Browse the local database | `bun run db:studio`, then open https://local.drizzle.studio. The file itself is `db/local.sqlite`. |
 | Deploy | `bun run deploy` (first time: see [Deploying](#deploying)) |
 | Lint | `bun run lint` |
 
 ## Code
 
 - `src/` is the React app (Vite, TypeScript, Tailwind).
-  - `src/pages/` has one component per screen: vote, rankings, and where do I rank.
+  - `src/pages/` has one component per screen: vote, rankings, where do I rank, and characters (add, edit, and delete fighters).
   - `src/components/` holds shared pieces such as the swipe card, the header, and the vote split bar.
   - `src/api/types.ts` has the types and the REST contract. The Worker imports them too, so both sides stay in sync.
   - `src/index.css` defines the palettes. Each palette sets CSS variables (`--bg`, `--panel`, `--corner-l`, `--corner-r`, and so on) that Tailwind exposes as `bg-panel`, `text-corner-l`, etc. The menu-style pieces (`stripes`, `outlined`, `cut`, `segment`, `press`) live there too. The palette and units are chosen from the settings menu and saved to localStorage.
-- `worker/` is the API. `app.ts` routes `/api` requests and `api.ts` has the queries behind each endpoint.
+- `worker/` is the API. `app.ts` routes `/api` requests, `api.ts` has the logic behind each endpoint, and `db.ts` has every SQL query.
 - `db/schema.sql` creates the tables: `fighter`, `pair`, `vote`, and `fighter_rating_snapshot`.
 - `scripts/db.ts` creates the tables and imports fighters from a CSV. `scripts/images.ts` makes fighter images.
 - `public/fighters/` holds the fighter images.
@@ -47,12 +48,12 @@ D1 bills per row read, and the free tier allows 5 million a day. The rule: **eve
 
 - **Totals live on the rows they describe.** A fighter has its `wins` and `losses`. `pair` has the head-to-head between two fighters, created the first time they meet, so there's no table of every possible pair. A vote updates the two fighters and their pair in one transaction. Nothing counts `vote` per request.
 - **Writes cost far more than reads** (about 1000× on the paid plan, 50× on the free tier's daily limits). Every index on `elo` or `wins`/`losses` adds row writes to every vote, so `fighter` keeps only `fighter_elo_idx` and a partial index of fighters with under 10 votes. Category pages scan the few hundred fighters instead.
-- **Rankings load 50 at a time** through the `elo` index. Search is the exception: a name can match anywhere, so it reads every fighter in scope.
+- **Rankings load 50 at a time.** Each page reads every fighter in scope to work out places, which is why rankings are cached.
 - **Cloudflare caches** rankings (except searches) for 30 seconds and `/api/roster` for 5 minutes, so most visitors read nothing. The app only prefetches the overall rankings; category tabs load when opened.
 - **"Where do I rank?"** needs the whole roster, hence the longer cache.
 - **Cron jobs do anything that needs to look at everything.** Nightly: refit the ratings (skipped if nobody voted that day), then snapshot everyone's place into `fighter_rating_snapshot` for the "This week" column. Snapshots older than about a week are deleted.
 
-Rough cost per request: a vote reads 6 rows and writes 6 (8 while a fighter has under 10 votes), a batch of matchups reads about 100, and an uncached rankings page about 100–300.
+Rough cost per request: a vote reads 6 rows and writes 6 (8 while a fighter has under 10 votes), a batch of matchups reads about 100, and an uncached rankings page reads every fighter in scope.
 
 ### Local load test and row accounting
 
@@ -91,7 +92,7 @@ other account usage that day. A local passing run does not prove the free plan w
 `db/fighters.example.csv` shows the format. The header row must be:
 
 ```
-fighter_id,name,short_name,category,quantity,emoji,image_url,weight_kg,height_cm,age,secret_weapon,weakness,elo
+fighter_id,name,short_name,category,quantity,emoji,image_url,weight_kg,height_cm,age,elo
 ```
 
 | Column | Required | Notes |
@@ -105,7 +106,6 @@ fighter_id,name,short_name,category,quantity,emoji,image_url,weight_kg,height_cm
 | `image_url` | no | Like `/fighters/gorilla.webp` |
 | `weight_kg` | yes | Weight of one of them |
 | `height_cm`, `age` | no | Only for real people, for the "Where do I rank?" page |
-| `secret_weapon`, `weakness` | yes | Shown on the card |
 | `elo` | no | Starting rating, used only when the fighter is first added. Defaults to 1000. |
 
 `bun run db:import fighters.csv` checks every row first and imports nothing if anything is wrong. Otherwise it adds new fighters and updates existing ones (keeping their elo). Fighters missing from the CSV are kept; add `--prune` to delete them with their votes.

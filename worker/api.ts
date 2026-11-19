@@ -1,6 +1,7 @@
 import type {
   Category,
   Fighter,
+  FighterInput,
   Matchup,
   RankedFighter,
   Rankings,
@@ -8,179 +9,179 @@ import type {
   VoteRequest,
 } from '../src/api/types'
 import { winChance } from '../src/lib/elo'
-import { closeness, EXPLORE, fitRatings, gaussian, kFactor, opponentSpread, uncertainty, weightedPick, type Tally } from './ratings'
+import * as sql from './db'
+import type { FighterRow, FighterValues } from './db'
+import { closeness, EXPLORE, fitRatings, gaussian, kFactor, opponentSpread, uncertainty, weightedPick } from './ratings'
 
-// D1 bills per row read. Every request here reads a small, fixed number of rows through an index,
-// however many fighters and votes there are. Anything that has to look at everything runs in the
-// nightly cron instead (see the bottom of this file).
-
-type Row = Record<string, unknown>
+// The logic behind each endpoint. All SQL lives in worker/db.ts.
 
 export const categories: Category[] = ['people', 'fictional', 'animals', 'objects']
 const RANKINGS_PAGE = 50
 
 export class BadRequest extends Error {}
 
-const toFighter = (row: Row): Fighter => ({
-  id: row.fighter_id as string,
-  name: row.name as string,
-  shortName: row.short_name as string,
+const toFighter = (row: FighterRow): Fighter => ({
+  id: row.fighter_id,
+  name: row.name,
+  shortName: row.short_name,
   category: row.category as Category,
-  count: row.quantity as number,
-  emoji: (row.emoji as string | null) ?? undefined,
-  imageUrl: (row.image_url as string | null) ?? undefined,
-  weightKg: row.weight_kg as number,
-  heightCm: (row.height_cm as number | null) ?? undefined,
-  age: (row.age as number | null) ?? undefined,
-  secretWeapon: row.secret_weapon as string,
-  weakness: row.weakness as string,
+  count: row.quantity,
+  emoji: row.emoji ?? undefined,
+  imageUrl: row.image_url ?? undefined,
+  weightKg: row.weight_kg,
+  heightCm: row.height_cm ?? undefined,
+  age: row.age ?? undefined,
 })
 
-const toRanked = (row: Row, rank: number, lastRank: unknown): RankedFighter => ({
+const toRanked = (row: FighterRow, rank: number, lastRank: number | null): RankedFighter => ({
   ...toFighter(row),
-  elo: row.elo as number,
-  wins: row.wins as number,
-  losses: row.losses as number,
+  elo: row.elo,
+  wins: row.wins,
+  losses: row.losses,
   rank,
-  rankChange: typeof lastRank === 'number' ? lastRank - rank : 0,
+  rankChange: lastRank === null ? 0 : lastRank - rank,
 })
 
+const games = (f: FighterRow) => f.wins + f.losses
 const pairId = (a: string, b: string) => (a < b ? `${a}~${b}` : `${b}~${a}`)
+
+// ---------------------------------------------------------------------------------------------
+// Fighters
+
+const text = (value: unknown, field: string, max: number) => {
+  if (typeof value !== 'string' || value.trim() === '') throw new BadRequest(`${field} is required`)
+  if (value.trim().length > max) throw new BadRequest(`${field} must be at most ${max} characters`)
+  return value.trim()
+}
+
+const optionalText = (value: unknown, field: string, max: number) =>
+  value === undefined || value === null || value === '' ? null : text(value, field, max)
+
+const number = (value: unknown, field: string, min: number) => {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min) throw new BadRequest(`${field} must be a number of at least ${min}`)
+  return value
+}
+
+const optionalNumber = (value: unknown, field: string, min: number) =>
+  value === undefined || value === null ? null : Math.round(number(value, field, min))
+
+/** Checks what the characters page sent and turns it into column values. */
+function toFighterValues(body: unknown): FighterValues {
+  if (typeof body !== 'object' || body === null) throw new BadRequest('Expected a fighter')
+  const input = body as Partial<Record<keyof FighterInput, unknown>>
+  if (!categories.includes(input.category as Category)) throw new BadRequest(`category must be one of ${categories.join(', ')}`)
+  const name = text(input.name, 'name', 60)
+  return {
+    name,
+    short_name: optionalText(input.shortName, 'shortName', 60) ?? name,
+    category: input.category as Category,
+    quantity: Math.round(number(input.count, 'count', 1)),
+    emoji: optionalText(input.emoji, 'emoji', 8),
+    weight_kg: number(input.weightKg, 'weightKg', 0.001),
+    height_cm: optionalNumber(input.heightCm, 'heightCm', 1),
+    age: optionalNumber(input.age, 'age', 0),
+  }
+}
+
+export async function listFighters(db: D1Database): Promise<Fighter[]> {
+  return (await sql.getAllFighters(db)).map(toFighter)
+}
+
+export async function createFighter(db: D1Database, body: unknown): Promise<Fighter> {
+  const values = toFighterValues(body)
+  // The id comes from the name, like "5 gorillas" -> "5-gorillas". Add a number if it is taken.
+  const base = values.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'fighter'
+  let id = base
+  for (let n = 2; await sql.getFighter(db, id); n++) id = `${base}-${n}`
+  await sql.addFighter(db, id, values)
+  return toFighter((await sql.getFighter(db, id))!)
+}
+
+export async function editFighter(db: D1Database, id: string, body: unknown) {
+  const values = toFighterValues(body)
+  if (!(await sql.getFighter(db, id))) throw new BadRequest(`Unknown fighter ${id}`)
+  await sql.updateFighter(db, id, values)
+}
+
+export async function removeFighter(db: D1Database, id: string) {
+  if (!(await sql.getFighter(db, id))) throw new BadRequest(`Unknown fighter ${id}`)
+  await sql.deleteFighter(db, id)
+}
 
 // ---------------------------------------------------------------------------------------------
 // Matchups
 
-type Candidate = { id: string; elo: number; games: number }
-const CANDIDATE_SQL = 'SELECT fighter_id, elo, wins + losses AS games FROM fighter'
-const toCandidate = (r: Row): Candidate => ({ id: r.fighter_id as string, elo: r.elo as number, games: r.games as number })
-
 /** How many fighters with the fewest votes to consider each time. */
-const FRESH_POOL = 40
+const NEW_POOL = 40
 /** Share of matchups built around one of the fighters with the fewest votes. */
-const FRESH_SHARE = 0.6
+const NEW_SHARE = 0.6
 /** How many fighters on each side of the target rating to choose an opponent from. */
 const NEIGHBORS = 4
 
-/** The highest fighter rowid, for picking random fighters. It only changes on import, so it is kept for a while. */
-let rowidCache: { at: number; max: Promise<number> } | undefined
-function maxRowid(db: D1Database): Promise<number> {
-  if (rowidCache && Date.now() - rowidCache.at < 10 * 60_000) return rowidCache.max
-  const max = db
-    .prepare('SELECT coalesce(max(rowid), 0) AS n FROM fighter')
-    .first<Row>()
-    .then((r) => (r?.n as number) ?? 0)
-  rowidCache = { at: Date.now(), max }
-  max.catch(() => (rowidCache = undefined))
-  return max
-}
-
-/** A random fighter: the first one at or after a random rowid. One row read. */
-const randomFighter = (db: D1Database, max: number) =>
-  db.prepare(`${CANDIDATE_SQL} WHERE rowid >= ?1 ORDER BY rowid LIMIT 1`).bind(1 + Math.floor(Math.random() * max))
-
 export async function getMatchups(db: D1Database, count: number): Promise<Matchup[]> {
-  if (!Number.isInteger(count) || count < 1 || count > 20) throw new BadRequest('count must be from 1 to 20')
-  const max = await maxRowid(db)
-  if (max === 0) return []
+  if (!Number.isInteger(count) || count < 1 || count > 5) throw new BadRequest('count must be from 1 to 5')
+  const maxRowid = await sql.getMaxRowid(db)
+  if (maxRowid === 0) return []
 
   // 1. Fighters with the fewest votes, plus some random ones.
-  const [freshResult, ...randomResults] = await db.batch<Row>([
-    // Uses fighter_unsettled_idx. Once everyone has 10 votes this is empty and leads are random.
-    db.prepare(`${CANDIDATE_SQL} WHERE wins + losses < 10 ORDER BY wins + losses LIMIT ?1`).bind(FRESH_POOL),
-    ...Array.from({ length: count * 2 }, () => randomFighter(db, max)),
-  ])
-  const fresh = freshResult.results.map(toCandidate)
-  const random = randomResults.flatMap((r) => r.results.map(toCandidate))
+  const randomRowids = Array.from({ length: count * 2 }, () => 1 + Math.floor(Math.random() * maxRowid))
+  const [newest, random] = await Promise.all([sql.getNewFighters(db, NEW_POOL), sql.getFightersAtRowids(db, randomRowids)])
 
   // A fighter appears at most once per batch while there are enough to go around.
   const used = new Set<string>()
-  const unused = (list: Candidate[], not?: Candidate) => list.filter((c) => !used.has(c.id) && c.id !== not?.id)
+  const unused = (list: FighterRow[], not?: FighterRow) => list.filter((f) => !used.has(f.fighter_id) && f.fighter_id !== not?.fighter_id)
 
-  const leads: Candidate[] = []
+  const leads: FighterRow[] = []
   for (let i = 0; i < count; i++) {
-    const pool = Math.random() < FRESH_SHARE ? unused(fresh) : []
+    const pool = Math.random() < NEW_SHARE ? unused(newest) : []
     const lead =
-      weightedPick(pool, (c) => uncertainty(c.games)) ?? weightedPick(unused(random), () => 1) ?? weightedPick(unused(fresh), () => 1)
+      weightedPick(pool, (f) => uncertainty(games(f))) ?? weightedPick(unused(random), () => 1) ?? weightedPick(unused(newest), () => 1)
     if (!lead) break
-    used.add(lead.id)
+    used.add(lead.fighter_id)
     leads.push(lead)
   }
 
-  // 2. An opponent for each: usually someone rated near a target close to the lead's rating, so
-  // the result is hard to call. Unsure fighters look further afield.
-  const plans = leads.map((lead) => {
-    const explore = Math.random() < EXPLORE
-    const target = lead.elo + gaussian() * opponentSpread(lead.games)
-    return { lead, explore, target }
-  })
-  const nearStatements = plans
-      .filter((p) => !p.explore)
-      .flatMap((p) => [
-        db.prepare(`${CANDIDATE_SQL} WHERE elo >= ?1 ORDER BY elo LIMIT ?2`).bind(Math.round(p.target), NEIGHBORS),
-        db.prepare(`${CANDIDATE_SQL} WHERE elo < ?1 ORDER BY elo DESC LIMIT ?2`).bind(Math.round(p.target), NEIGHBORS),
-      ])
-  // Every plan can choose exploration; D1 rejects an empty batch.
-  const near = nearStatements.length ? await db.batch<Row>(nearStatements) : []
+  // 2. An opponent for each: usually someone rated close to the lead, so the result is hard to
+  // call. Fighters with few votes look further afield. A few opponents are fully random.
+  const plans = leads.map((lead) => ({
+    explore: Math.random() < EXPLORE,
+    target: Math.round(lead.elo + gaussian() * opponentSpread(games(lead))),
+  }))
+  const near = await sql.getFightersNearRatings(db, plans.filter((p) => !p.explore).map((p) => p.target), NEIGHBORS)
+  let nextNear = 0
+  const options = plans.map((p) => (p.explore ? random : near[nextNear++]))
 
-  const pairs: [string, string][] = []
+  const pairs: [FighterRow, FighterRow][] = []
   const seenPairs = new Set<string>()
-  let nearIndex = 0
-  for (const { lead, explore } of plans) {
-    let options = random
-    if (!explore) {
-      options = [...near[nearIndex].results, ...near[nearIndex + 1].results].map(toCandidate)
-      nearIndex += 2
-    }
+  leads.forEach((lead, i) => {
     // Exploration stays uniform so every pair can come up. Otherwise, the closer the ratings the likelier the pick.
-    const even = (c: Candidate) => (explore ? 1 : closeness(lead.elo, c.elo))
+    const even = (f: FighterRow) => (plans[i].explore ? 1 : closeness(lead.elo, f.elo))
     const opponent =
-      weightedPick(unused(options, lead), (c) => (0.25 + uncertainty(c.games)) * even(c)) ??
+      weightedPick(unused(options[i], lead), (f) => (0.25 + uncertainty(games(f))) * even(f)) ??
       weightedPick(unused(random, lead), even) ??
-      weightedPick(
-        [...options, ...random, ...fresh].filter((c) => c.id !== lead.id),
-        () => 1,
-      )
-    if (!opponent) continue
-    const id = pairId(lead.id, opponent.id)
-    if (seenPairs.has(id)) continue
+      weightedPick([...options[i], ...random, ...newest].filter((f) => f.fighter_id !== lead.fighter_id), () => 1)
+    if (!opponent) return
+    const id = pairId(lead.fighter_id, opponent.fighter_id)
+    if (seenPairs.has(id)) return
     seenPairs.add(id)
-    used.add(opponent.id)
-    pairs.push(lead.id < opponent.id ? [lead.id, opponent.id] : [opponent.id, lead.id])
-  }
-  if (pairs.length === 0) return []
+    used.add(opponent.fighter_id)
+    pairs.push(lead.fighter_id < opponent.fighter_id ? [lead, opponent] : [opponent, lead])
+  })
 
-  // 3. The chosen fighters' details and the head-to-head so far.
-  const ids = [...new Set(pairs.flat())]
-  const [fighterRows, tallyRows] = await db.batch<Row>([
-    db.prepare('SELECT * FROM fighter WHERE fighter_id IN (SELECT value FROM json_each(?1))').bind(JSON.stringify(ids)),
-    db
-      .prepare(
-        `SELECT p.fighter_a_id, p.fighter_b_id, p.a_wins, p.b_wins
-         FROM json_each(?1) j
-         CROSS JOIN pair p ON p.fighter_a_id = j.value ->> '$[0]' AND p.fighter_b_id = j.value ->> '$[1]'`,
-      )
-      .bind(JSON.stringify(pairs)),
-  ])
-  const fighters = new Map(fighterRows.results.map((r) => [r.fighter_id as string, toFighter(r)]))
-  const tallies = new Map(tallyRows.results.map((r) => [pairId(r.fighter_a_id as string, r.fighter_b_id as string), r]))
+  // 3. The head-to-head so far for each pair.
+  const tallies = await sql.getPairs(db, pairs.map(([a, b]) => [a.fighter_id, b.fighter_id]))
 
-  return pairs.flatMap(([a, b]) => {
-    const fa = fighters.get(a)
-    const fb = fighters.get(b)
-    if (!fa || !fb) return []
-    const t = tallies.get(pairId(a, b))
-    const aVotes = (t?.a_wins as number) ?? 0
-    const bVotes = (t?.b_wins as number) ?? 0
+  return pairs.map(([a, b], i) => {
+    const aVotes = tallies[i]?.a_wins ?? 0
+    const bVotes = tallies[i]?.b_wins ?? 0
     const flip = Math.random() < 0.5
-    return [
-      {
-        id: pairId(a, b),
-        left: flip ? fb : fa,
-        right: flip ? fa : fb,
-        leftVotes: flip ? bVotes : aVotes,
-        rightVotes: flip ? aVotes : bVotes,
-      },
-    ]
+    return {
+      id: pairId(a.fighter_id, b.fighter_id),
+      left: toFighter(flip ? b : a),
+      right: toFighter(flip ? a : b),
+      leftVotes: flip ? bVotes : aVotes,
+      rightVotes: flip ? aVotes : bVotes,
+    }
   })
 }
 
@@ -203,42 +204,19 @@ export async function vote(db: D1Database, body: unknown) {
     throw new BadRequest(`${winnerId} is not in matchup ${matchupId}`)
   }
 
-  const { results } = await db
-    .prepare(`${CANDIDATE_SQL} WHERE fighter_id IN (?1, ?2)`)
-    .bind(a, b)
-    .run<Row>()
-  const fa = results.map(toCandidate).find((c) => c.id === a)
-  const fb = results.map(toCandidate).find((c) => c.id === b)
+  const [fa, fb] = await Promise.all([sql.getFighter(db, a), sql.getFighter(db, b)])
   if (!fa || !fb) throw new BadRequest(`Unknown matchup ${matchupId}`)
 
   const aWon = winnerId === a ? 1 : 0
   const surprise = aWon - winChance(fa.elo, fb.elo)
   // Fighters with few votes move further, so they reach their real rating quickly.
-  const aDelta = Math.round(kFactor(fa.games) * surprise)
-  const bDelta = Math.round(kFactor(fb.games) * surprise)
-
-  // The ratings were read before this write so votes never wait on each other. Every update is an
-  // increment, so a vote that lands in between is never lost. A batch runs as one transaction.
-  const addResult = db.prepare('UPDATE fighter SET elo = elo + ?1, wins = wins + ?2, losses = losses + ?3 WHERE fighter_id = ?4')
-  await db.batch([
-    db.prepare('INSERT INTO vote (fighter_a_id, fighter_b_id, winner_id) VALUES (?1, ?2, ?3)').bind(a, b, winnerId),
-    db
-      .prepare(
-        `INSERT INTO pair (fighter_a_id, fighter_b_id, a_wins, b_wins) VALUES (?1, ?2, ?3, ?4)
-         ON CONFLICT DO UPDATE SET a_wins = a_wins + excluded.a_wins, b_wins = b_wins + excluded.b_wins`,
-      )
-      .bind(a, b, aWon, 1 - aWon),
-    addResult.bind(aDelta, aWon, 1 - aWon, a),
-    addResult.bind(-bDelta, 1 - aWon, aWon, b),
-  ])
+  const aChange = Math.round(kFactor(games(fa)) * surprise)
+  const bChange = -Math.round(kFactor(games(fb)) * surprise)
+  await sql.addVote(db, a, b, winnerId, aChange, bChange)
 }
 
 // ---------------------------------------------------------------------------------------------
 // Rankings
-
-/** The snapshot "This week" compares against: the oldest one from the last 7 days. */
-// ORDER BY ... LIMIT 1 stops at the first row; min() with a WHERE reads every row in range.
-const LAST_WEEK = `(SELECT snapshot_date FROM fighter_rating_snapshot WHERE snapshot_date >= date('now', '-7 days') ORDER BY snapshot_date LIMIT 1)`
 
 export async function getRankings(db: D1Database, request: RankingsRequest): Promise<Rankings> {
   const { category, offset = 0 } = request
@@ -247,120 +225,51 @@ export async function getRankings(db: D1Database, request: RankingsRequest): Pro
   if (!Number.isInteger(offset) || offset < 0) throw new BadRequest('offset must be a whole number')
   if (search.length > 100) throw new BadRequest('search is too long')
 
-  const scope = category ? 'WHERE f.category = ?1' : 'WHERE ?1 IS NULL'
-  const lastRank = category ? 's.category_rank' : 's.rank'
-  const page = search
-    ? // Search reads every fighter in scope, since a name can match anywhere.
-      db
-        .prepare(
-          `SELECT r.*, ${lastRank} AS last_rank
-           FROM (
-             SELECT f.*, row_number() OVER (ORDER BY f.elo DESC, f.fighter_id) AS place
-             FROM fighter f ${scope}
-           ) r
-           LEFT JOIN fighter_rating_snapshot s ON s.snapshot_date = ${LAST_WEEK} AND s.fighter_id = r.fighter_id
-           WHERE r.name LIKE '%' || ?2 || '%' ESCAPE '\\'
-           ORDER BY r.place
-           LIMIT ?3 OFFSET ?4`,
-        )
-        .bind(category ?? null, search.replace(/[\\%_]/g, '\\$&'), RANKINGS_PAGE + 1, offset)
-    : // Place is worked out below from the row order. A window function here would double the rows read.
-      db
-        .prepare(
-          `SELECT f.*, (
-             SELECT ${lastRank} FROM fighter_rating_snapshot s
-             WHERE s.snapshot_date = ${LAST_WEEK} AND s.fighter_id = f.fighter_id
-           ) AS last_rank
-           FROM fighter f ${scope}
-           ORDER BY f.elo DESC, f.fighter_id
-           LIMIT ?3 OFFSET ?2`,
-        )
-        .bind(category ?? null, offset, RANKINGS_PAGE + 1)
-
-  const [pageRows, total] = await db.batch<Row>([
-    page,
-    // vote_id only goes up, so the newest one is the number of votes. One row read.
-    db.prepare('SELECT coalesce(max(vote_id), 0) AS total FROM vote'),
+  // Ask for one extra row to know whether there is another page.
+  const [rows, totalVotes] = await Promise.all([
+    sql.getRankingsPage(db, category ?? null, search, RANKINGS_PAGE + 1, offset),
+    sql.getVoteCount(db),
   ])
 
-  const rows = pageRows.results.slice(0, RANKINGS_PAGE)
   return {
-    totalVotes: total.results[0].total as number,
-    fighters: rows.map((r, i) => toRanked(r, (r.place as number | undefined) ?? offset + i + 1, r.last_rank)),
-    nextOffset: pageRows.results.length > RANKINGS_PAGE ? offset + RANKINGS_PAGE : null,
+    totalVotes,
+    fighters: rows
+      .slice(0, RANKINGS_PAGE)
+      .map((r) => toRanked(r, r.place, category ? r.last_category_rank : r.last_rank)),
+    nextOffset: rows.length > RANKINGS_PAGE ? offset + RANKINGS_PAGE : null,
   }
 }
 
-/**
- * Every fighter, best first. The "where do I rank" page needs the whole ladder. This reads every
- * fighter, so app.ts caches the response for a few minutes.
- */
+/** Every fighter, best first, for the "where do I rank" page. */
 export async function getRoster(db: D1Database): Promise<RankedFighter[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT f.*, s.rank AS last_rank
-       FROM fighter f
-       LEFT JOIN fighter_rating_snapshot s ON s.snapshot_date = ${LAST_WEEK} AND s.fighter_id = f.fighter_id
-       ORDER BY f.elo DESC, f.fighter_id`,
-    )
-    .run<Row>()
-  return results.map((r, i) => toRanked(r, i + 1, r.last_rank))
+  const rows = await sql.getRoster(db)
+  return rows.map((r, i) => toRanked(r, i + 1, r.last_rank))
 }
 
 // ---------------------------------------------------------------------------------------------
-// Scheduled jobs. These are the only places that read everything.
+// Scheduled jobs
 
-/** True if anyone voted in the last `minutes`. vote_id grows with time, so this reads one row. */
+/** True if anyone voted in the last `minutes`. */
 async function votedSince(db: D1Database, minutes: number) {
-  const latest = await db.prepare('SELECT created_at FROM vote ORDER BY vote_id DESC LIMIT 1').first<Row>()
+  const latest = await sql.getLatestVoteTime(db)
   const cutoff = new Date(Date.now() - minutes * 60_000).toISOString().replace('T', ' ').slice(0, 19)
-  return latest !== null && (latest.created_at as string) >= cutoff
+  return latest !== null && latest >= cutoff
 }
 
 /**
  * Recomputes every rating from all head-to-head totals at once (see worker/ratings.ts), pulled
- * lightly toward each fighter's starting rating. Reads every fighter and every pair, so it runs
- * nightly, and only if anyone voted that day.
+ * lightly toward each fighter's starting rating. Runs nightly, only if anyone voted that day.
  */
 export async function refitRatings(db: D1Database, ifVotedInMinutes?: number) {
   if (ifVotedInMinutes !== undefined && !(await votedSince(db, ifVotedInMinutes))) return
-  const [fighters, pairs] = await db.batch<Row>([
-    db.prepare('SELECT fighter_id, elo, start_elo FROM fighter'),
-    db.prepare('SELECT fighter_a_id, fighter_b_id, a_wins, b_wins FROM pair'),
-  ])
+  const [fighters, pairs] = await Promise.all([sql.getAllFighters(db), sql.getAllPairs(db)])
   const fit = fitRatings(
-    new Map(fighters.results.map((r) => [r.fighter_id as string, r.start_elo as number])),
-    new Map(fighters.results.map((r) => [r.fighter_id as string, r.elo as number])),
-    pairs.results.map(
-      (r): Tally => ({
-        a: r.fighter_a_id as string,
-        b: r.fighter_b_id as string,
-        aWins: r.a_wins as number,
-        bWins: r.b_wins as number,
-      }),
-    ),
+    new Map(fighters.map((f) => [f.fighter_id, f.start_elo])),
+    new Map(fighters.map((f) => [f.fighter_id, f.elo])),
+    pairs.map((p) => ({ a: p.fighter_a_id, b: p.fighter_b_id, aWins: p.a_wins, bWins: p.b_wins })),
   )
-
-  const setElo = db.prepare('UPDATE fighter SET elo = ?1 WHERE fighter_id = ?2')
-  const updates = fighters.results
-    .map((r) => ({ id: r.fighter_id as string, elo: Math.round(fit.get(r.fighter_id as string)!), old: r.elo }))
-    .filter((u) => u.elo !== u.old)
-    .map((u) => setElo.bind(u.elo, u.id))
-  for (let i = 0; i < updates.length; i += 500) await db.batch(updates.slice(i, i + 500))
-}
-
-/** Records today's places for "This week". Only the first snapshot each day is kept. scripts/db.ts has a copy. */
-const SNAPSHOT_SQL = `
-  INSERT OR IGNORE INTO fighter_rating_snapshot (snapshot_date, fighter_id, elo, rank, category_rank)
-  SELECT date('now'), fighter_id, elo,
-         row_number() OVER (ORDER BY elo DESC, fighter_id),
-         row_number() OVER (PARTITION BY category ORDER BY elo DESC, fighter_id)
-  FROM fighter
-`
-
-export async function takeSnapshot(db: D1Database) {
-  await db.batch([
-    db.prepare(SNAPSHOT_SQL),
-    db.prepare(`DELETE FROM fighter_rating_snapshot WHERE snapshot_date < date('now', '-8 days')`),
-  ])
+  const changed = fighters
+    .map((f) => ({ id: f.fighter_id, elo: Math.round(fit.get(f.fighter_id)!), old: f.elo }))
+    .filter((r) => r.elo !== r.old)
+  await sql.setRatings(db, changed)
 }
